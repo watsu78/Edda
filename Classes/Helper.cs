@@ -135,6 +135,38 @@ public partial class Helper {
         return newFileName;
     }
 
+    // Resize an image file in-place so that it fits within maxWidth x maxHeight, preserving aspect ratio.
+    // Returns without changes if the image is already within bounds.
+    public static void ResizeImageToMax(string filePath, int maxWidth, int maxHeight) {
+        try {
+            using Image src = Image.FromFile(filePath);
+            int width = src.Width;
+            int height = src.Height;
+            if (width <= maxWidth && height <= maxHeight) {
+                return;
+            }
+            double scale = Math.Min((double)maxWidth / width, (double)maxHeight / height);
+            int newW = Math.Max(1, (int)Math.Round(width * scale));
+            int newH = Math.Max(1, (int)Math.Round(height * scale));
+            using Bitmap target = new(newW, newH);
+            using Graphics g = Graphics.FromImage(target);
+            g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            g.DrawImage(src, new Rectangle(0, 0, newW, newH));
+            // Save to a temp file first to avoid locking issues, then replace
+            string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".jpeg");
+            target.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+            // Ensure original is closed before overwrite
+            src.Dispose();
+            File.Copy(tempPath, filePath, true);
+            try { File.Delete(tempPath); } catch { }
+        } catch (Exception ex) {
+            Trace.WriteLine($"WARNING: Failed to resize cover image {filePath}: {ex}");
+        }
+    }
+
     public static string DefaultRagnarockMapPath() {
         string docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string ragPath = Path.Combine(docPath, "Ragnarock");
@@ -207,9 +239,11 @@ public partial class Helper {
     }
     public static string GetRagnarockMapFolder() {
         var userSettings = new UserSettingsManager(Program.SettingsFile);
-        return int.TryParse(userSettings.GetValueForKey(Edda.Const.UserSettingsKey.MapSaveLocationIndex), out var index) && index > 0
-            ? Path.Combine(userSettings.GetValueForKey(Edda.Const.UserSettingsKey.MapSaveLocationPath), Program.GameInstallRelativeMapFolder)
-            : Helper.DefaultRagnarockMapPath();
+        if (int.TryParse(userSettings.GetValueForKey(Edda.Const.UserSettingsKey.MapSaveLocationIndex), out var index) && index > 0) {
+            var customPath = userSettings.GetValueForKey(Edda.Const.UserSettingsKey.MapSaveLocationPath);
+            return string.IsNullOrEmpty(customPath) ? Helper.DefaultRagnarockMapPath() : customPath;
+        }
+        return Helper.DefaultRagnarockMapPath();
     }
 
     // Processes

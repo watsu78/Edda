@@ -20,12 +20,19 @@ public class MapDifficulty {
     public SortedSet<Note> selectedNotes;
     public EditHistory<Note> editorHistory;
     public bool needsSave = false;
+    // Per-column index of notes, sorted by beat (leverages Note.CompareTo with fixed col)
+    public SortedSet<Note>[] notesByColumn = new SortedSet<Note>[4] { new(), new(), new(), new() };
     public MapDifficulty(IEnumerable<Note> notes, IEnumerable<BPMChange> bpmChanges, IEnumerable<Bookmark> bookmarks) {
         this.bpmChanges = new(bpmChanges);
         this.bookmarks = new(bookmarks);
         this.notes = new(notes);
         this.selectedNotes = new();
         this.editorHistory = new(Editor.HistoryMaxSize);
+        // Initialize per-column index
+        foreach (var n in this.notes) {
+            int col = Math.Max(0, Math.Min(3, n.col));
+            notesByColumn[col].Add(n);
+        }
     }
     // Utility functions for syntax clarity with MapDifficulty? variables.
     public void MarkDirty() {
@@ -38,6 +45,39 @@ public class MapDifficulty {
     public SortedSet<Note> GetNotesRange(double startBeat, double endBeat) {
         // We use non-existent columns to generate a smaller subset guaranteed to contain all of the notes between given beats.
         return notes.GetViewBetween(new Note(startBeat, -1), new Note(endBeat, -1));
+    }
+
+    // Column-aware range query: O(log n + k) per column, then union
+    public SortedSet<Note> GetNotesRange(double startBeat, double endBeat, int startCol, int endCol) {
+        var result = new SortedSet<Note>();
+        int sCol = Math.Max(0, startCol);
+        int eCol = Math.Min(3, endCol);
+        if (eCol < sCol) (sCol, eCol) = (eCol, sCol);
+        for (int c = sCol; c <= eCol; c++) {
+            var view = notesByColumn[c].GetViewBetween(new Note(startBeat, c), new Note(endBeat, c));
+            foreach (var n in view) {
+                result.Add(n);
+            }
+        }
+        return result;
+    }
+
+    // Keep notes and per-column index in sync
+    public bool AddNoteInternal(Note n) {
+        int col = Math.Max(0, Math.Min(3, n.col));
+        bool added = notes.Add(n);
+        if (added) {
+            notesByColumn[col].Add(n);
+        }
+        return added;
+    }
+    public bool RemoveNoteInternal(Note n) {
+        int col = Math.Max(0, Math.Min(3, n.col));
+        bool removed = notes.Remove(n);
+        if (removed) {
+            notesByColumn[col].Remove(n);
+        }
+        return removed;
     }
 }
 public enum RagnarockMapDifficulties {
@@ -281,7 +321,7 @@ public class MapEditor : IDisposable {
     }
     public void AddNotes(IEnumerable<Note> notes, bool updateHistory = true) {
         currentMapDifficulty?.MarkDirty();
-        var drawNotes = notes.Where(n => currentMapDifficulty?.notes?.Add(n) == true).ToList();
+        var drawNotes = notes.Where(n => currentMapDifficulty != null && currentMapDifficulty.AddNoteInternal(n)).ToList();
         // draw the added notes
         // note: by drawing this note out of order, it is inconsistently layered with other notes.
         //       should we take the performance hit of redrawing the entire grid for visual consistency?
@@ -302,14 +342,14 @@ public class MapEditor : IDisposable {
         currentMapDifficulty?.MarkDirty();
 
         // remove all old Notes
-        var undrawNotes = oldNotes.Where(n => currentMapDifficulty?.notes?.Remove(n) == true).ToList();
+        var undrawNotes = oldNotes.Where(n => currentMapDifficulty != null && currentMapDifficulty.RemoveNoteInternal(n)).ToList();
 
         // undraw the added notes
         parent.gridController.UndrawNotes(undrawNotes);
         parent.gridController.UndrawNavNotes(undrawNotes);
 
         // add new notes
-        var drawNotes = newNotes.Where(n => currentMapDifficulty?.notes?.Add(n) == true).ToList();
+        var drawNotes = newNotes.Where(n => currentMapDifficulty != null && currentMapDifficulty.AddNoteInternal(n)).ToList();
 
         // draw new notes
         parent.gridController.DrawNotes(drawNotes);
@@ -343,7 +383,7 @@ public class MapEditor : IDisposable {
         }
         // finally, unselect all removed notes
         foreach (Note n in noteList) {
-            currentMapDifficulty?.notes.Remove(n);
+            if (currentMapDifficulty != null) currentMapDifficulty.RemoveNoteInternal(n);
             UnselectNote(n, false);
         }
         currentMapDifficulty?.editorHistory.Print();

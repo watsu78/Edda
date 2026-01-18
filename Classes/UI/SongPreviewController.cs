@@ -82,6 +82,7 @@ namespace Edda {
             var previewPath = Path.Combine(mapEditor.mapFolder, BeatmapDefaults.PreviewFilename);
             try {
                 previewStream = new VorbisWaveReader(previewPath);
+                // Use SoundTouch for preview tempo processing
                 previewTempoStream = new SoundTouchWaveStream(previewStream);
                 previewChannel = new SampleChannel(previewTempoStream);
                 UpdateVolume();

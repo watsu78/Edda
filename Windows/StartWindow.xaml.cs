@@ -54,66 +54,124 @@ namespace Edda {
         }
 
         private void CreateRecentMapItem(string name, string path) {
-            /* The XAML we're creating
-                < StackPanel Height = "30" Margin = "5" Orientation = "Horizontal" >
-                    < Image Source = "/Resources/blankMap.png" />
-                    < StackPanel Margin = "7 0 0 0" VerticalAlignment = "Center" >
-                        < TextBlock Foreground = "#002668" FontSize = "14" FontWeight = "Bold" FontFamily = "Bahnschrift" > Song Name </ TextBlock >
-                        < TextBlock FontSize = "11" FontFamily = "Bahnschrift SemiLight" > C:/ SongPath </ TextBlock >
-                    </ StackPanel >
-                </ StackPanel >
-            */
-            StackPanel sp1 = new();
-            sp1.Height = 30;
-            sp1.Margin = new Thickness(5);
-            sp1.Orientation = Orientation.Horizontal;
+            // Build left-side content (name + path)
+            StackPanel leftContent = new();
+            leftContent.Height = 30;
+            leftContent.Margin = new Thickness(5);
+            leftContent.Orientation = Orientation.Horizontal;
 
-            Image img = new();
-            img.Source = Helper.BitmapGenerator("blankMap.png");
+            // Removed left-side blank map icon
 
-            StackPanel sp2 = new();
-            sp2.Margin = new(7, 0, 0, 0);
-            sp2.VerticalAlignment = VerticalAlignment.Center;
+            StackPanel textPanel = new();
+            textPanel.Margin = new(7, 0, 0, 0);
+            textPanel.VerticalAlignment = VerticalAlignment.Center;
 
-            TextBlock tb1 = new();
-            tb1.Foreground = (SolidColorBrush)new BrushConverter().ConvertFrom("#002668");
-            tb1.FontSize = 14;
-            tb1.FontWeight = FontWeights.Bold;
-            tb1.FontFamily = new("Bahnschrift");
-            tb1.Text = name;
+            TextBlock tbName = new();
+            tbName.Foreground = (SolidColorBrush)new BrushConverter().ConvertFrom("#002668");
+            tbName.FontSize = 14;
+            tbName.FontWeight = FontWeights.Bold;
+            tbName.FontFamily = new("Bahnschrift");
+            tbName.Text = name;
             if (string.IsNullOrWhiteSpace(name)) {
-                tb1.FontStyle = FontStyles.Italic;
-                tb1.Text = "Untitled Map";
+                tbName.FontStyle = FontStyles.Italic;
+                tbName.Text = "Untitled Map";
             }
 
-            TextBlock tb2 = new();
-            tb2.FontSize = 11;
-            tb2.FontFamily = new("Bahnschrift SemiLight");
-            tb2.Text = path;
+            TextBlock tbPath = new();
+            tbPath.FontSize = 11;
+            tbPath.FontFamily = new("Bahnschrift SemiLight");
+            tbPath.Text = path;
 
-            sp2.Children.Add(tb1);
-            sp2.Children.Add(tb2);
+            textPanel.Children.Add(tbName);
+            textPanel.Children.Add(tbPath);
 
-            sp1.Children.Add(img);
-            sp1.Children.Add(sp2);
+            leftContent.Children.Add(textPanel);
+
+            // Build delete button with a simple trash icon using vector shapes
+            Button deleteBtn = new();
+            deleteBtn.Width = 24;
+            deleteBtn.Height = 24;
+            deleteBtn.Margin = new Thickness(5, 3, 5, 3);
+            deleteBtn.HorizontalAlignment = HorizontalAlignment.Right;
+            deleteBtn.VerticalAlignment = VerticalAlignment.Center;
+            deleteBtn.BorderBrush = null;
+            deleteBtn.Background = Brushes.Transparent;
+            deleteBtn.Focusable = false;
+            deleteBtn.ToolTip = "Remove from recent";
+
+            // Compose trash icon using SVG path data (Font Awesome Trash)
+            string svgPathData = "M136.7 5.9C141.1-7.2 153.3-16 167.1-16l113.9 0c13.8 0 26 8.8 30.4 21.9L320 32 416 32c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 96C14.3 96 0 81.7 0 64S14.3 32 32 32l96 0 8.7-26.1zM32 144l384 0 0 304c0 35.3-28.7 64-64 64L96 512c-35.3 0-64-28.7-64-64l0-304zm88 64c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24z";
+            var trashIcon = new System.Windows.Shapes.Path {
+                Fill = Brushes.DimGray,
+                Stretch = Stretch.Uniform,
+                Data = Geometry.Parse(svgPathData)
+            };
+
+            Viewbox vb = new();
+            vb.Stretch = Stretch.Uniform;
+            vb.Child = trashIcon;
+            deleteBtn.Content = vb;
+
+            // Prevent opening map when clicking delete
+            deleteBtn.Click += (s, e) => {
+                e.Handled = true;
+                var res = MessageBox.Show(this, "Are you sure you want to remove this map from the list of recently opened maps?", "Confirm Removal", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+                if (res == MessageBoxResult.Yes) {
+                    RecentMaps.RemoveRecentlyOpened(path);
+                    RecentMaps.Write();
+                    PopulateRecentlyOpenedMaps();
+                }
+            };
+
+            // Right-side icons panel: only delete button aligned to right
+            StackPanel rightIcons = new();
+            rightIcons.Orientation = Orientation.Horizontal;
+            rightIcons.VerticalAlignment = VerticalAlignment.Center;
+            rightIcons.Margin = new Thickness(5, 3, 5, 3);
+            rightIcons.Children.Add(deleteBtn);
+
+            // Compose item container with two columns: left content + right icons
+            Grid container = new();
+            container.HorizontalAlignment = HorizontalAlignment.Stretch;
+            container.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            container.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+            Grid.SetColumn(leftContent, 0);
+            Grid.SetColumn(rightIcons, 1);
+            container.Children.Add(leftContent);
+            container.Children.Add(rightIcons);
 
             ListViewItem item = new();
-            item.Content = sp1;
+            item.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+            item.Content = container;
+
+            // Open map on item left click (excluding delete button)
             item.MouseLeftButtonUp += new MouseButtonEventHandler((sender, e) => {
+                // If the click originated from the delete button, ignore
+                if (e.OriginalSource is DependencyObject d && IsDescendantOf(d, deleteBtn)) {
+                    return;
+                }
                 item.IsSelected = false;
                 OpenMap(path);
             });
 
+            // Right-click still offers removal
             item.MouseRightButtonUp += new MouseButtonEventHandler((sender, e) => {
                 var res = MessageBox.Show(this, "Are you sure you want to remove this map from the list of recently opened maps?", "Confirm Removal", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-
                 if (res == MessageBoxResult.Yes) {
-                    ListViewRecentMaps.Items.Remove(item);
                     RecentMaps.RemoveRecentlyOpened(path);
                     RecentMaps.Write();
+                    PopulateRecentlyOpenedMaps();
                 }
             });
             ListViewRecentMaps.Items.Add(item);
+        }
+
+        private bool IsDescendantOf(DependencyObject source, DependencyObject ancestor) {
+            while (source != null) {
+                if (source == ancestor) return true;
+                source = VisualTreeHelper.GetParent(source);
+            }
+            return false;
         }
 
         private void PopulateRecentlyOpenedMaps() {

@@ -7,6 +7,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using WF = System.Windows.Forms;
 
 namespace Edda {
     public partial class MainWindow : Window {
@@ -60,6 +62,7 @@ namespace Edda {
             oldSongTempoStream?.Dispose();
 
             songChannel = null;
+            // (Scroll Sync by Timer removed)
 
             var oldNoteScanner = noteScanner;
             noteScanner = null;
@@ -108,6 +111,8 @@ namespace Edda {
             var oldSongPreviewController = songPreviewController;
             songPreviewController = null;
             oldSongPreviewController?.Dispose();
+
+            
 
             userSettings?.Clear();
             userSettings = null;
@@ -417,6 +422,17 @@ namespace Edda {
         private void BtnChangeDifficulty1_Click(object sender, RoutedEventArgs e) {
             SwitchDifficultyMap(1);
         }
+                private void MenuItemKeyboardShortcuts_Click(object sender, RoutedEventArgs e) {
+                    var win = Helper.GetFirstWindow<KeyboardShortcutsWindow>();
+                    if (win == null) {
+                        win = new KeyboardShortcutsWindow();
+                        win.Owner = this;
+                        win.Topmost = true;
+                        win.Show();
+                    } else {
+                        win.Focus();
+                    }
+                }
         private void BtnChangeDifficulty2_Click(object sender, RoutedEventArgs e) {
             SwitchDifficultyMap(2);
         }
@@ -426,8 +442,77 @@ namespace Edda {
             txtSongVol.Text = $"{(int)(sliderSongVol.Value * 100)}%";
         }
         private void SliderDrumVol_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            drummer?.ChangeVolume(sliderDrumVol.Value);
-            txtDrumVol.Text = $"{(int)(sliderDrumVol.Value * 100)}%";
+            // Update master volume and reflect visually on per-drum sliders with freeze behavior on increases
+            drumMaster = sliderDrumVol.Value;
+            drummer?.ChangeVolume(drumMaster);
+            txtDrumVol.Text = $"{(int)(drumMaster * 100)}%";
+
+            suppressDrumSliderHandlers = true;
+            // Compute candidates
+            double cand0 = drumBaselines[0] * drumMaster;
+            double cand1 = drumBaselines[1] * drumMaster;
+            double cand2 = drumBaselines[2] * drumMaster;
+            double cand3 = drumBaselines[3] * drumMaster;
+
+            if (e.NewValue >= e.OldValue) {
+                // Increasing master: only update drums whose candidate exceeds current effective (visual) value
+                if (cand0 > sliderDrum1Vol.Value) sliderDrum1Vol.Value = cand0;
+                if (cand1 > sliderDrum2Vol.Value) sliderDrum2Vol.Value = cand1;
+                if (cand2 > sliderDrum3Vol.Value) sliderDrum3Vol.Value = cand2;
+                if (cand3 > sliderDrum4Vol.Value) sliderDrum4Vol.Value = cand3;
+            } else {
+                // Decreasing master: update all proportionally
+                sliderDrum1Vol.Value = cand0;
+                sliderDrum2Vol.Value = cand1;
+                sliderDrum3Vol.Value = cand2;
+                sliderDrum4Vol.Value = cand3;
+            }
+            suppressDrumSliderHandlers = false;
+
+            txtDrum1Vol.Text = $"{(int)(sliderDrum1Vol.Value * 100)}%";
+            txtDrum2Vol.Text = $"{(int)(sliderDrum2Vol.Value * 100)}%";
+            txtDrum3Vol.Text = $"{(int)(sliderDrum3Vol.Value * 100)}%";
+            txtDrum4Vol.Text = $"{(int)(sliderDrum4Vol.Value * 100)}%";
+        }
+        private void SliderDrum1Vol_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (suppressDrumSliderHandlers) { txtDrum1Vol.Text = $"{(int)(sliderDrum1Vol.Value * 100)}%"; return; }
+            double baseline = drumMaster > 0 ? Math.Min(1.0, sliderDrum1Vol.Value / drumMaster) : 0.0;
+            drumBaselines[0] = baseline;
+            drummer?.ChangeChannelVolume(0, baseline);
+            txtDrum1Vol.Text = $"{(int)(sliderDrum1Vol.Value * 100)}%";
+        }
+        private void sliderDrum1Vol_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum0, drumBaselines[0]);
+        }
+        private void SliderDrum2Vol_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (suppressDrumSliderHandlers) { txtDrum2Vol.Text = $"{(int)(sliderDrum2Vol.Value * 100)}%"; return; }
+            double baseline = drumMaster > 0 ? Math.Min(1.0, sliderDrum2Vol.Value / drumMaster) : 0.0;
+            drumBaselines[1] = baseline;
+            drummer?.ChangeChannelVolume(1, baseline);
+            txtDrum2Vol.Text = $"{(int)(sliderDrum2Vol.Value * 100)}%";
+        }
+        private void sliderDrum2Vol_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum1, drumBaselines[1]);
+        }
+        private void SliderDrum3Vol_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (suppressDrumSliderHandlers) { txtDrum3Vol.Text = $"{(int)(sliderDrum3Vol.Value * 100)}%"; return; }
+            double baseline = drumMaster > 0 ? Math.Min(1.0, sliderDrum3Vol.Value / drumMaster) : 0.0;
+            drumBaselines[2] = baseline;
+            drummer?.ChangeChannelVolume(2, baseline);
+            txtDrum3Vol.Text = $"{(int)(sliderDrum3Vol.Value * 100)}%";
+        }
+        private void sliderDrum3Vol_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum2, drumBaselines[2]);
+        }
+        private void SliderDrum4Vol_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (suppressDrumSliderHandlers) { txtDrum4Vol.Text = $"{(int)(sliderDrum4Vol.Value * 100)}%"; return; }
+            double baseline = drumMaster > 0 ? Math.Min(1.0, sliderDrum4Vol.Value / drumMaster) : 0.0;
+            drumBaselines[3] = baseline;
+            drummer?.ChangeChannelVolume(3, baseline);
+            txtDrum4Vol.Text = $"{(int)(sliderDrum4Vol.Value * 100)}%";
+        }
+        private void sliderDrum4Vol_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum3, drumBaselines[3]);
         }
         private void sliderSongTempo_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
             if (!mapIsLoaded) {
@@ -442,6 +527,32 @@ namespace Edda {
         private void sliderSongTempo_MouseDoubleClick(object sender, MouseButtonEventArgs e) {
             sliderSongTempo.Value = Audio.DefaultSongTempo;
         }
+        private void SliderVolume_MouseDoubleClick(object sender, MouseButtonEventArgs e) {
+            if (sender is Slider s) {
+                if (ReferenceEquals(s, sliderSongVol)) {
+                    s.Value = 0.5; // song channel handled separately
+                    return;
+                }
+                if (ReferenceEquals(s, sliderDrumVol)) {
+                    s.Value = 0.5; // updates master and visuals via handler
+                    return;
+                }
+                // Per-drum sliders: set baseline so that effective becomes 50%
+                double targetEffective = 0.5;
+                int idx = ReferenceEquals(s, sliderDrum1Vol) ? 0 : ReferenceEquals(s, sliderDrum2Vol) ? 1 : ReferenceEquals(s, sliderDrum3Vol) ? 2 : 3;
+                double newBaseline = drumMaster > 0 ? Math.Min(1.0, targetEffective / drumMaster) : 0.0;
+                drumBaselines[idx] = newBaseline;
+                drummer?.ChangeChannelVolume(idx, newBaseline);
+                suppressDrumSliderHandlers = true;
+                s.Value = newBaseline * drumMaster;
+                suppressDrumSliderHandlers = false;
+                if (idx == 0) userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum0, drumBaselines[0]);
+                if (idx == 1) userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum1, drumBaselines[1]);
+                if (idx == 2) userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum2, drumBaselines[2]);
+                if (idx == 3) userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum3, drumBaselines[3]);
+            }
+        }
+
         private void CheckMetronome_Click(object sender, RoutedEventArgs e) {
             if (metronome != null) {
                 metronome.isEnabled = (checkMetronome.IsChecked == true);
@@ -670,15 +781,6 @@ namespace Edda {
         private void TxtGridDivision_KeyDown(object sender, KeyEventArgs e) {
             if (e.Key == Key.Return) {
                 TxtGridDivision_LostFocus(sender, null);
-            }
-        }
-        private void CheckWaveform_Click(object sender, RoutedEventArgs e) {
-            if (checkWaveform.IsChecked == true) {
-                gridController.showWaveform = true;
-                gridController.DrawMainWaveform();
-            } else {
-                gridController.showWaveform = false;
-                gridController.UndrawMainWaveform();
             }
         }
         private void ComboEnvironment_SelectionChanged(object sender, SelectionChangedEventArgs e) {

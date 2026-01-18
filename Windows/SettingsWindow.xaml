@@ -5,7 +5,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:local="clr-namespace:Edda"
     mc:Ignorable="d"
-    Title="Settings" Name="Window" Width="280" MinWidth="280" MaxWidth="280" Height="560" ResizeMode="CanResize" WindowStartupLocation="CenterOwner" Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
+    Title="Settings" Name="Window" Width="640" MinWidth="640" Height="560" ResizeMode="CanResize" WindowStartupLocation="CenterOwner" Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
     <Grid>
         <DockPanel>
 
@@ -16,14 +16,26 @@
                         <GradientStop Color="{DynamicResource {x:Static SystemColors.ControlDarkColorKey}}" Offset="1"/>
                     </LinearGradientBrush>
                 </Border.Background>
-                <StackPanel>
+                <DockPanel LastChildFill="False">
+                    <Button x:Name="btnResetLayout" Margin="10 10 0 10" Width="110" HorizontalAlignment="Left" Click="BtnResetLayout_Click">Reset Layout</Button>
                     <Button x:Name="btnSave" Margin="0 10 10 10" Width="70" HorizontalAlignment="Right" Click="BtnSave_Click">OK</Button>
-                </StackPanel>
+                </DockPanel>
             </Border>
             <ScrollViewer VerticalScrollBarVisibility="Auto" FocusVisualStyle="{x:Null}">
-                <StackPanel Margin="5 5 0 20" HorizontalAlignment="Left">
-                    <Label Padding="10 5" FontWeight="Bold" FontSize="16" FontFamily="Bahnschrift">Editor</Label>
-                    <Grid Margin="15 0 5 0" VerticalAlignment="Center">
+                <Grid Margin="10 10 10 20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Left Top: Editor -->
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0 0 10 10">
+                        <Label Padding="10 5" FontWeight="Bold" FontSize="16" FontFamily="Bahnschrift">Editor</Label>
+                        <Grid Margin="15 0 5 0" VerticalAlignment="Center">
                         <Grid.Resources>
                             <Style TargetType="Border" >
                                 <Setter Property="Padding" Value="5,5,5,5" />
@@ -35,14 +47,14 @@
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110" />
-                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
                         <Border Grid.Row="0" Grid.Column="0">
@@ -96,12 +108,16 @@
                         </Border>
 
                         <Border Grid.Row="5" Grid.Column="1">
-                            <ComboBox x:Name="comboNotePasteBehavior" DisplayMemberPath="Label" SelectionChanged="ComboNotePasteBehavior_SelectionChanged" VerticalAlignment="Center"/>
+                            <ComboBox x:Name="comboNotePasteBehavior" DisplayMemberPath="Label" SelectionChanged="ComboNotePasteBehavior_SelectionChanged" VerticalAlignment="Center" HorizontalAlignment="Left" Width="140"/>
                         </Border>
 
-                    </Grid>
-                    <Label Margin="0 10 0 0" Padding="10 5" FontWeight="Bold" FontSize="16" FontFamily="Bahnschrift">Audio Playback</Label>
-                    <Grid Margin="15 0 5 0" VerticalAlignment="Center">
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Right Top: Audio Playback -->
+                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="10 0 0 10">
+                        <Label Padding="10 5" FontWeight="Bold" FontSize="16" FontFamily="Bahnschrift">Audio Playback</Label>
+                        <Grid Margin="15 0 5 0" VerticalAlignment="Center">
                         <Grid.Resources>
                             <Style TargetType="Border" >
                                 <Setter Property="Padding" Value="5,5,5,5" />
@@ -117,10 +133,11 @@
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110" />
-                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
                         <Border Grid.Row="0" Grid.Column="0">
@@ -128,7 +145,7 @@
                         </Border>
 
                         <Border Grid.Row="0" Grid.Column="1">
-                            <ComboBox x:Name="comboPlaybackDevice" DisplayMemberPath="Name" SelectionChanged="ComboPlaybackDevice_SelectionChanged" VerticalAlignment="Center"/>
+                            <ComboBox x:Name="comboPlaybackDevice" DisplayMemberPath="Name" SelectionChanged="ComboPlaybackDevice_SelectionChanged" VerticalAlignment="Center" HorizontalAlignment="Left" Width="180"/>
                         </Border>
 
                         <Border Grid.Row="1" Grid.Column="0">
@@ -147,7 +164,7 @@
                         </Border>
 
                         <Border Grid.Row="2" Grid.Column="1">
-                            <ComboBox x:Name="comboDrumSample" SelectionChanged="ComboDrumSample_SelectionChanged" VerticalAlignment="Center"/>
+                            <ComboBox x:Name="comboDrumSample" SelectionChanged="ComboDrumSample_SelectionChanged" VerticalAlignment="Center" HorizontalAlignment="Left" Width="140"/>
                         </Border>
 
                         <Border Grid.Row="3" Grid.Column="0">
@@ -179,9 +196,19 @@
                                 <Slider x:Name="sliderDrumVol" Maximum="1" ValueChanged="SliderDrumVol_ValueChanged" IsMoveToPointEnabled="True" MouseLeftButtonUp="sliderDrumVol_MouseLeftButtonUp" Thumb.DragCompleted="sliderDrumVol_DragCompleted"/>
                             </DockPanel>
                         </Border>
-                    </Grid>
-                    <Label x:Name="spectrogramOptionsLabel" Margin="0 10 0 0" Padding="10 5" FontWeight="Bold" FontSize="16" FontFamily="Bahnschrift" Visibility="Collapsed">Song Spectrogram</Label>
-                    <Grid x:Name="spectrogramOptions" Margin="15 0 5 0" VerticalAlignment="Center" Visibility="Collapsed">
+
+                        
+
+                        
+                        
+                        
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Left Bottom: Song Spectrogram -->
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0 10 10 0">
+                        <Label x:Name="spectrogramOptionsLabel" Padding="10 5" FontWeight="Bold" FontSize="16" FontFamily="Bahnschrift" Visibility="Collapsed">Song Spectrogram</Label>
+                        <Grid x:Name="spectrogramOptions" Margin="15 0 5 0" VerticalAlignment="Center" Visibility="Collapsed">
                         <Grid.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="Padding" Value="5,5,5,5" />
@@ -199,8 +226,8 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110" />
-                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
                         <Border Grid.Row="0" Grid.Column="0">
@@ -279,9 +306,13 @@
                             </TextBlock>
                         </StackPanel>
 
-                    </Grid>
-                    <Label Margin="0 10 0 0" Padding="10 5" FontWeight="Bold" FontSize="16" FontFamily="Bahnschrift">Miscellaneous</Label>
-                    <Grid Margin="15 0 5 0" VerticalAlignment="Center">
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Right Bottom: Miscellaneous -->
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="10 10 0 0">
+                        <Label Padding="10 5" FontWeight="Bold" FontSize="16" FontFamily="Bahnschrift">Miscellaneous</Label>
+                        <Grid Margin="15 0 5 0" VerticalAlignment="Center">
                         <Grid.Resources>
                             <Style TargetType="Border" >
                                 <Setter Property="Padding" Value="5,5,5,5" />
@@ -299,8 +330,8 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110" />
-                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
                         <Border Grid.Row="0" Grid.Column="0">
@@ -324,17 +355,18 @@
                         </Border>
 
                         <Border Grid.Row="2" Grid.Column="1">
-                            <ComboBox x:Name="comboMapSaveFolder" VerticalAlignment="Center" SelectionChanged="comboMapSaveFolder_SelectionChanged">
-                                <ComboBoxItem x:Name="comboMapSaveFolder_Documents">Documents</ComboBoxItem>
-                                <ComboBoxItem x:Name="comboMapSaveFolder_GameInstall">Game Install</ComboBoxItem>
-                            </ComboBox>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="txtMapSaveFolderPath" Grid.Column="0" MinWidth="320" HorizontalAlignment="Stretch" VerticalAlignment="Center" LostFocus="TxtMapSaveFolderPath_LostFocus" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled" TextWrapping="NoWrap" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                                <Button x:Name="btnBrowseMapSaveFolder" Grid.Column="1" Width="80" Margin="5 0 0 0" Click="BtnBrowseMapSaveFolder_Click">Open</Button>
+                            </Grid>
                         </Border>
-
-                        <Border Grid.Row="3" Grid.ColumnSpan="2" Padding="0">
-                            <TextBlock Width="210" FontSize="10" FontStyle="Italic" x:Name="txtMapSaveFolderPath" VerticalAlignment="Center" MouseLeftButtonUp="txtMapSaveFolderPath_MouseLeftButtonUp" Foreground="{DynamicResource {x:Static SystemColors.HotTrackBrushKey}}">C:/Username/Documents/Ragnarock/CustomSongs</TextBlock>
-                        </Border>
-                    </Grid>
-                </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
             </ScrollViewer>
         </DockPanel>
     </Grid>

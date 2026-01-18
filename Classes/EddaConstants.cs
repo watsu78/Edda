@@ -42,6 +42,7 @@ namespace Edda.Const {
     }
     public static class DefaultUserSettings {
         public const bool EnableSpectrogram = true;
+        public const int SpectrogramWidth = 100; // default initial width for spectrogram column
         public const string DefaultMapper = "";
         public const int DefaultNoteSpeed = Editor.DefaultNoteSpeed;
         public const int DefaultGridSpacing = Editor.DefaultGridSpacing;
@@ -49,6 +50,10 @@ namespace Edda.Const {
         public const string DrumSampleFile = "snaredrum";
         public const float DefaultSongVolume = 0.4F;
         public const float DefaultNoteVolume = 1;
+        public const float NoteVolumeDrum0 = 1;
+        public const float NoteVolumeDrum1 = 1;
+        public const float NoteVolumeDrum2 = 1;
+        public const float NoteVolumeDrum3 = 1;
         public const bool PanDrumSounds = true;
         public const bool SpectrogramCache = true;
         public const string SpectrogramType = "Standard";
@@ -70,10 +75,20 @@ namespace Edda.Const {
         public const bool EnableNavBookmarks = true;
         public const bool EnableNavBPMChanges = false;
         public const bool EnableNavNotes = false;
+        public const bool EnableNavNotesCol0 = false;
+        public const bool EnableNavNotesCol1 = false;
+        public const bool EnableNavNotesCol2 = false;
+        public const bool EnableNavNotesCol3 = false;
+        public const double NavNoteTintIntensity = 0.5; // 0..1
+        public const double NavNoteTintIntensityCol0 = 0.5;
+        public const double NavNoteTintIntensityCol1 = 0.5;
+        public const double NavNoteTintIntensityCol2 = 0.5;
+        public const double NavNoteTintIntensityCol3 = 0.5;
     }
 
     public static class UserSettingsKey {
         public const string EnableSpectrogram = "enableSpectrogram";
+        public const string SpectrogramWidth = "spectrogramWidth";
         public const string DefaultMapper = "defaultMapper";
         public const string DefaultNoteSpeed = "defaultNoteSpeed";
         public const string DefaultGridSpacing = "defaultGridSpacing";
@@ -83,6 +98,10 @@ namespace Edda.Const {
         public const string PanDrumSounds = "panDrumSounds";
         public const string DefaultSongVolume = "defaultSongVolume";
         public const string DefaultNoteVolume = "defaultNoteVolume";
+        public const string NoteVolumeDrum0 = "noteVolumeDrum0";
+        public const string NoteVolumeDrum1 = "noteVolumeDrum1";
+        public const string NoteVolumeDrum2 = "noteVolumeDrum2";
+        public const string NoteVolumeDrum3 = "noteVolumeDrum3";
         public const string SpectrogramCache = "spectrogramCache";
         public const string SpectrogramType = "spectrogramType";
         public const string SpectrogramQuality = "spectrogramQuality";
@@ -110,8 +129,21 @@ namespace Edda.Const {
         public const string NavBPMChangeLabelColor = "navBPMChangeLabelColor";
         public const string NavBPMChangeShadowOpacity = "navBPMChangeShadowOpacity";
         public const string EnableNavNotes = "enableNavNotes";
+        public const string EnableNavNotesCol0 = "enableNavNotesCol0";
+        public const string EnableNavNotesCol1 = "enableNavNotesCol1";
+        public const string EnableNavNotesCol2 = "enableNavNotesCol2";
+        public const string EnableNavNotesCol3 = "enableNavNotesCol3";
         public const string NavNoteColor = "navNoteColor";
+        public const string NavNoteColorCol0 = "navNoteColorCol0";
+        public const string NavNoteColorCol1 = "navNoteColorCol1";
+        public const string NavNoteColorCol2 = "navNoteColorCol2";
+        public const string NavNoteColorCol3 = "navNoteColorCol3";
         public const string NavSelectedNoteColor = "navSelectedNoteColor";
+        public const string NavNoteTintIntensity = "navNoteTintIntensity";
+        public const string NavNoteTintIntensityCol0 = "navNoteTintIntensityCol0";
+        public const string NavNoteTintIntensityCol1 = "navNoteTintIntensityCol1";
+        public const string NavNoteTintIntensityCol2 = "navNoteTintIntensityCol2";
+        public const string NavNoteTintIntensityCol3 = "navNoteTintIntensityCol3";
     }
     public static class Editor {
         // Grid drawing
@@ -210,6 +242,7 @@ namespace Edda.Const {
             public static string HighlightColour => Colors.Gold.ToString();
             public const double Size = 3;
             public const double ColumnGap = 4;
+            public const double Opacity = 0.85;
         }
         public static class Stats {
             public static readonly MediaColor Colour = Colors.Black;

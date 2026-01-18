@@ -18,7 +18,13 @@ namespace Edda {
         IDisposable ColorWaveformColorChangedDebounce;
         IDisposable ColorBookmarkColorChangedDebounce;
         IDisposable ColorBPMChangeColorChangedDebounce;
-        IDisposable ColorNoteColorChangedDebounce;
+        // Global notes controls removed
+        IDisposable ColorNoteCol0ColorChangedDebounce;
+        IDisposable ColorNoteCol1ColorChangedDebounce;
+        IDisposable ColorNoteCol2ColorChangedDebounce;
+        IDisposable ColorNoteCol3ColorChangedDebounce;
+        // Per-column tint sliders (no debounce)
+        // Tint intensity does not need debounce; it's lightweight
 
         public CustomizeNavBarWindow(MainWindow caller, UserSettingsManager userSettings) {
             InitializeComponent();
@@ -69,19 +75,41 @@ namespace Edda {
                     )
                 );
 
-            CheckNote.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotes);
-            ColorNote.SelectedColor = (Color)ColorConverter.ConvertFromString(userSettings.GetValueForKey(UserSettingsKey.NavNoteColor) ?? Editor.NavNote.Colour);
-            ColorNote.SecondaryColor = (Color)ColorConverter.ConvertFromString(userSettings.GetValueForKey(UserSettingsKey.NavSelectedNoteColor) ?? Editor.NavNote.HighlightColour);
-            ToggleNoteColorIsEnabled();
-            ColorNoteColorChangedDebounce = Observable
-                .FromEventPattern<RoutedEventArgs>(ColorNote, nameof(PortableColorPicker.ColorChanged))
+            // Per-column note controls
+            CheckNoteCol0.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotesCol0);
+            CheckNoteCol1.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotesCol1);
+            CheckNoteCol2.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotesCol2);
+            CheckNoteCol3.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotesCol3);
+            try { SliderNoteTintIntensityCol0.Value = double.Parse(userSettings.GetValueForKey(UserSettingsKey.NavNoteTintIntensityCol0) ?? DefaultUserSettings.NavNoteTintIntensityCol0.ToString()); } catch { SliderNoteTintIntensityCol0.Value = DefaultUserSettings.NavNoteTintIntensityCol0; }
+            try { SliderNoteTintIntensityCol1.Value = double.Parse(userSettings.GetValueForKey(UserSettingsKey.NavNoteTintIntensityCol1) ?? DefaultUserSettings.NavNoteTintIntensityCol1.ToString()); } catch { SliderNoteTintIntensityCol1.Value = DefaultUserSettings.NavNoteTintIntensityCol1; }
+            try { SliderNoteTintIntensityCol2.Value = double.Parse(userSettings.GetValueForKey(UserSettingsKey.NavNoteTintIntensityCol2) ?? DefaultUserSettings.NavNoteTintIntensityCol2.ToString()); } catch { SliderNoteTintIntensityCol2.Value = DefaultUserSettings.NavNoteTintIntensityCol2; }
+            try { SliderNoteTintIntensityCol3.Value = double.Parse(userSettings.GetValueForKey(UserSettingsKey.NavNoteTintIntensityCol3) ?? DefaultUserSettings.NavNoteTintIntensityCol3.ToString()); } catch { SliderNoteTintIntensityCol3.Value = DefaultUserSettings.NavNoteTintIntensityCol3; }
+            ColorNoteCol0.SelectedColor = (Color)ColorConverter.ConvertFromString(userSettings.GetValueForKey(UserSettingsKey.NavNoteColorCol0) ?? userSettings.GetValueForKey(UserSettingsKey.NavNoteColor) ?? Editor.NavNote.Colour);
+            ColorNoteCol1.SelectedColor = (Color)ColorConverter.ConvertFromString(userSettings.GetValueForKey(UserSettingsKey.NavNoteColorCol1) ?? userSettings.GetValueForKey(UserSettingsKey.NavNoteColor) ?? Editor.NavNote.Colour);
+            ColorNoteCol2.SelectedColor = (Color)ColorConverter.ConvertFromString(userSettings.GetValueForKey(UserSettingsKey.NavNoteColorCol2) ?? userSettings.GetValueForKey(UserSettingsKey.NavNoteColor) ?? Editor.NavNote.Colour);
+            ColorNoteCol3.SelectedColor = (Color)ColorConverter.ConvertFromString(userSettings.GetValueForKey(UserSettingsKey.NavNoteColorCol3) ?? userSettings.GetValueForKey(UserSettingsKey.NavNoteColor) ?? Editor.NavNote.Colour);
+            ToggleNoteRowsEnabled();
+            ColorNoteCol0ColorChangedDebounce = Observable
+                .FromEventPattern<RoutedEventArgs>(ColorNoteCol0, nameof(PortableColorPicker.ColorChanged))
                 .Throttle(TimeSpan.FromMilliseconds(Editor.DrawDebounceInterval))
                 .ObserveOn(SynchronizationContext.Current)
-                .Subscribe(eventPattern =>
-                    Dispatcher.Invoke(() =>
-                        ColorNote_ColorChanged(eventPattern.Sender, eventPattern.EventArgs)
-                    )
-                );
+                .Subscribe(eventPattern => Dispatcher.Invoke(() => ColorNoteCol0_ColorChanged(eventPattern.Sender, eventPattern.EventArgs)));
+            ColorNoteCol1ColorChangedDebounce = Observable
+                .FromEventPattern<RoutedEventArgs>(ColorNoteCol1, nameof(PortableColorPicker.ColorChanged))
+                .Throttle(TimeSpan.FromMilliseconds(Editor.DrawDebounceInterval))
+                .ObserveOn(SynchronizationContext.Current)
+                .Subscribe(eventPattern => Dispatcher.Invoke(() => ColorNoteCol1_ColorChanged(eventPattern.Sender, eventPattern.EventArgs)));
+            ColorNoteCol2ColorChangedDebounce = Observable
+                .FromEventPattern<RoutedEventArgs>(ColorNoteCol2, nameof(PortableColorPicker.ColorChanged))
+                .Throttle(TimeSpan.FromMilliseconds(Editor.DrawDebounceInterval))
+                .ObserveOn(SynchronizationContext.Current)
+                .Subscribe(eventPattern => Dispatcher.Invoke(() => ColorNoteCol2_ColorChanged(eventPattern.Sender, eventPattern.EventArgs)));
+            ColorNoteCol3ColorChangedDebounce = Observable
+                .FromEventPattern<RoutedEventArgs>(ColorNoteCol3, nameof(PortableColorPicker.ColorChanged))
+                .Throttle(TimeSpan.FromMilliseconds(Editor.DrawDebounceInterval))
+                .ObserveOn(SynchronizationContext.Current)
+                .Subscribe(eventPattern => Dispatcher.Invoke(() => ColorNoteCol3_ColorChanged(eventPattern.Sender, eventPattern.EventArgs)));
+
 
             doneInit = true;
         }
@@ -112,6 +140,8 @@ namespace Edda {
 
         private void UpdateNotes() {
             UpdateSettings();
+            // Ensure nav note brushes reflect latest settings immediately
+            caller.gridController.InvalidateNavNoteBrushes();
             caller.canvasNavNotes.Children.Clear();
             caller.gridController.DrawNavNotes(caller.mapEditor.currentMapDifficulty.notes);
             caller.gridController.HighlightNavNotes(caller.mapEditor.currentMapDifficulty.selectedNotes);
@@ -186,21 +216,61 @@ namespace Edda {
             SliderBPMChangeShadowOpacity.IsEnabled = status;
         }
 
-        private void CheckNote_Click(object sender, RoutedEventArgs e) {
-            ToggleNoteColorIsEnabled();
-            userSettings.SetValueForKey(UserSettingsKey.EnableNavNotes, CheckNote.IsChecked ?? false);
-            UpdateNotes();
+        private void ToggleNoteRowsEnabled() {
+            ToggleNoteRowEnabled(0, CheckNoteCol0.IsChecked ?? false);
+            ToggleNoteRowEnabled(1, CheckNoteCol1.IsChecked ?? false);
+            ToggleNoteRowEnabled(2, CheckNoteCol2.IsChecked ?? false);
+            ToggleNoteRowEnabled(3, CheckNoteCol3.IsChecked ?? false);
         }
-        private void ColorNote_ColorChanged(object sender, RoutedEventArgs e) {
-            if (doneInit) {
-                userSettings.SetValueForKey(UserSettingsKey.NavNoteColor, ColorNote.SelectedColor.ToString() ?? Editor.NavNote.Colour);
-                userSettings.SetValueForKey(UserSettingsKey.NavSelectedNoteColor, ColorNote.SecondaryColor.ToString() ?? Editor.NavNote.HighlightColour);
-                UpdateNotes();
+        private void ToggleNoteRowEnabled(int col, bool enabled) {
+            switch (col) {
+                case 0:
+                    ColorNoteCol0.IsEnabled = enabled;
+                    SliderNoteTintIntensityCol0.IsEnabled = enabled;
+                    break;
+                case 1:
+                    ColorNoteCol1.IsEnabled = enabled;
+                    SliderNoteTintIntensityCol1.IsEnabled = enabled;
+                    break;
+                case 2:
+                    ColorNoteCol2.IsEnabled = enabled;
+                    SliderNoteTintIntensityCol2.IsEnabled = enabled;
+                    break;
+                case 3:
+                    ColorNoteCol3.IsEnabled = enabled;
+                    SliderNoteTintIntensityCol3.IsEnabled = enabled;
+                    break;
             }
         }
-        private void ToggleNoteColorIsEnabled() {
-            ColorNote.IsEnabled = CheckNote.IsChecked ?? false;
+
+        private void SliderNoteTintIntensityCol0_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (doneInit) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteTintIntensityCol0, SliderNoteTintIntensityCol0.Value);
+                caller.gridController.UpdateRuneColorsAndRetint();
+            }
         }
+        private void SliderNoteTintIntensityCol1_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (doneInit) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteTintIntensityCol1, SliderNoteTintIntensityCol1.Value);
+                caller.gridController.UpdateRuneColorsAndRetint();
+            }
+        }
+        private void SliderNoteTintIntensityCol2_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (doneInit) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteTintIntensityCol2, SliderNoteTintIntensityCol2.Value);
+                caller.gridController.UpdateRuneColorsAndRetint();
+            }
+        }
+        private void SliderNoteTintIntensityCol3_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (doneInit) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteTintIntensityCol3, SliderNoteTintIntensityCol3.Value);
+                caller.gridController.UpdateRuneColorsAndRetint();
+            }
+        }
+        private void SliderNoteTintIntensityCol0_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) { SliderNoteTintIntensityCol0.Value = DefaultUserSettings.NavNoteTintIntensityCol0; }
+        private void SliderNoteTintIntensityCol1_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) { SliderNoteTintIntensityCol1.Value = DefaultUserSettings.NavNoteTintIntensityCol1; }
+        private void SliderNoteTintIntensityCol2_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) { SliderNoteTintIntensityCol2.Value = DefaultUserSettings.NavNoteTintIntensityCol2; }
+        private void SliderNoteTintIntensityCol3_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) { SliderNoteTintIntensityCol3.Value = DefaultUserSettings.NavNoteTintIntensityCol3; }
 
         private void ButtonResetWaveform_Click(object sender, RoutedEventArgs e) {
             ColorWaveform.SelectedColor = Editor.Waveform.ColourWPF;
@@ -219,9 +289,69 @@ namespace Edda {
             SliderBPMChangeShadowOpacity.Value = Editor.NavBPMChange.ShadowOpacity;
         }
 
-        private void ButtonResetNote_Click(object sender, RoutedEventArgs e) {
-            ColorNote.SelectedColor = (Color)ColorConverter.ConvertFromString(Editor.NavNote.Colour);
-            ColorNote.SecondaryColor = (Color)ColorConverter.ConvertFromString(Editor.NavNote.HighlightColour);
+        // Global notes reset removed
+        private void CheckNoteCol0_Click(object sender, RoutedEventArgs e) {
+            userSettings.SetValueForKey(UserSettingsKey.EnableNavNotesCol0, CheckNoteCol0.IsChecked ?? false);
+            ToggleNoteRowEnabled(0, CheckNoteCol0.IsChecked ?? false);
+            UpdateNotes();
         }
+        private void CheckNoteCol1_Click(object sender, RoutedEventArgs e) {
+            userSettings.SetValueForKey(UserSettingsKey.EnableNavNotesCol1, CheckNoteCol1.IsChecked ?? false);
+            ToggleNoteRowEnabled(1, CheckNoteCol1.IsChecked ?? false);
+            UpdateNotes();
+        }
+        private void CheckNoteCol2_Click(object sender, RoutedEventArgs e) {
+            userSettings.SetValueForKey(UserSettingsKey.EnableNavNotesCol2, CheckNoteCol2.IsChecked ?? false);
+            ToggleNoteRowEnabled(2, CheckNoteCol2.IsChecked ?? false);
+            UpdateNotes();
+        }
+        private void CheckNoteCol3_Click(object sender, RoutedEventArgs e) {
+            userSettings.SetValueForKey(UserSettingsKey.EnableNavNotesCol3, CheckNoteCol3.IsChecked ?? false);
+            ToggleNoteRowEnabled(3, CheckNoteCol3.IsChecked ?? false);
+            UpdateNotes();
+        }
+
+        private void ColorNoteCol0_ColorChanged(object sender, RoutedEventArgs e) {
+            if (doneInit) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteColorCol0, ColorNoteCol0.SelectedColor.ToString() ?? Editor.NavNote.Colour);
+                UpdateNotes();
+                caller.gridController.UpdateRuneColorsAndRetint();
+            }
+        }
+        private void ColorNoteCol1_ColorChanged(object sender, RoutedEventArgs e) {
+            if (doneInit) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteColorCol1, ColorNoteCol1.SelectedColor.ToString() ?? Editor.NavNote.Colour);
+                UpdateNotes();
+                caller.gridController.UpdateRuneColorsAndRetint();
+            }
+        }
+        private void ColorNoteCol2_ColorChanged(object sender, RoutedEventArgs e) {
+            if (doneInit) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteColorCol2, ColorNoteCol2.SelectedColor.ToString() ?? Editor.NavNote.Colour);
+                UpdateNotes();
+                caller.gridController.UpdateRuneColorsAndRetint();
+            }
+        }
+        private void ColorNoteCol3_ColorChanged(object sender, RoutedEventArgs e) {
+            if (doneInit) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteColorCol3, ColorNoteCol3.SelectedColor.ToString() ?? Editor.NavNote.Colour);
+                UpdateNotes();
+                caller.gridController.UpdateRuneColorsAndRetint();
+            }
+        }
+
+        private void ButtonResetNoteCol0_Click(object sender, RoutedEventArgs e) {
+            ColorNoteCol0.SelectedColor = (Color)ColorConverter.ConvertFromString(Editor.NavNote.Colour);
+        }
+        private void ButtonResetNoteCol1_Click(object sender, RoutedEventArgs e) {
+            ColorNoteCol1.SelectedColor = (Color)ColorConverter.ConvertFromString(Editor.NavNote.Colour);
+        }
+        private void ButtonResetNoteCol2_Click(object sender, RoutedEventArgs e) {
+            ColorNoteCol2.SelectedColor = (Color)ColorConverter.ConvertFromString(Editor.NavNote.Colour);
+        }
+        private void ButtonResetNoteCol3_Click(object sender, RoutedEventArgs e) {
+            ColorNoteCol3.SelectedColor = (Color)ColorConverter.ConvertFromString(Editor.NavNote.Colour);
+        }
+
     }
 }

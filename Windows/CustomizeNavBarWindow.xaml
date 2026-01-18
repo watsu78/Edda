@@ -5,7 +5,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:colorpicker="clr-namespace:ColorPicker;assembly=ColorPicker"
     mc:Ignorable="d"
-    Title="Customize Navigation Bar" Name="Window" Width="450" MinWidth="450" MaxWidth="450" Height="260" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
+    Title="Customize Navigation Bar" Name="Window" Width="450" MinWidth="450" MaxWidth="450" Height="420" MinHeight="420" MaxHeight="420" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
     <Grid>
         <DockPanel>
 
@@ -20,14 +20,18 @@
                     <Button x:Name="btnSave" Margin="0 10 10 10" Width="70" HorizontalAlignment="Right" Click="BtnSave_Click">OK</Button>
                 </StackPanel>
             </Border>
-            <StackPanel Margin="5 5 0 20" HorizontalAlignment="Left">
-                <Grid Margin="15 0 5 0" VerticalAlignment="Center">
+            <ScrollViewer Margin="5 5 0 20" VerticalScrollBarVisibility="Auto">
+                <Grid Margin="15 0 5 0">
                     <Grid.Resources>
                         <Style TargetType="Border" >
                             <Setter Property="Padding" Value="5,5,5,5" />
                         </Style>
                     </Grid.Resources>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="*" />
@@ -52,6 +56,10 @@
 
                     <Border Grid.Row="0" Grid.Column="2">
                         <TextBlock FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center">Color</TextBlock>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="3">
+                        <TextBlock FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center">Tint</TextBlock>
                     </Border>
 
                     <Border Grid.Row="0" Grid.Column="4">
@@ -120,24 +128,89 @@
                         <Button x:Name="ButtonResetBPMChange" Width="40" Click="ButtonResetBPMChange_Click">Reset</Button>
                     </Border>
 
-                    <Border Grid.Row="4" Grid.Column="0">
-                        <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center">Notes</TextBlock>
+                    <!-- Global notes row removed (replaced by per-column controls) -->
+
+                    <!-- Per-column note colors -->
+                    <Border Grid.Row="5" Grid.Column="0">
+                        <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center">Notes D1</TextBlock>
+                    </Border>
+                    <Border Grid.Row="5" Grid.Column="1">
+                        <CheckBox x:Name="CheckNoteCol0" HorizontalAlignment="Center" VerticalAlignment="Center" Click="CheckNoteCol0_Click"/>
+                    </Border>
+                    <Border Grid.Row="5" Grid.Column="2">
+                        <colorpicker:PortableColorPicker x:Name="ColorNoteCol0" Height="20" ShowFractionalPart="False"/>
+                    </Border>
+                    <Border Grid.Row="5" Grid.Column="3">
+                        <StackPanel Orientation="Horizontal">
+                            <Slider x:Name="SliderNoteTintIntensityCol0" Minimum="0" Maximum="1" Width="70" VerticalAlignment="Center" ValueChanged="SliderNoteTintIntensityCol0_ValueChanged" MouseDoubleClick="SliderNoteTintIntensityCol0_MouseDoubleClick"/>
+                            <Label Content="{Binding ElementName=SliderNoteTintIntensityCol0, Path=Value}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="5" Grid.Column="4">
+                        <Button x:Name="ButtonResetNoteCol0" Width="40" Click="ButtonResetNoteCol0_Click">Reset</Button>
                     </Border>
 
-                    <Border Grid.Row="4" Grid.Column="1">
-                        <CheckBox x:Name="CheckNote" HorizontalAlignment="Center" VerticalAlignment="Center" Click="CheckNote_Click"/>
+                    <Border Grid.Row="6" Grid.Column="0">
+                        <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center">Notes D2</TextBlock>
+                    </Border>
+                    <Border Grid.Row="6" Grid.Column="1">
+                        <CheckBox x:Name="CheckNoteCol1" HorizontalAlignment="Center" VerticalAlignment="Center" Click="CheckNoteCol1_Click"/>
+                    </Border>
+                    <Border Grid.Row="6" Grid.Column="2">
+                        <colorpicker:PortableColorPicker x:Name="ColorNoteCol1" Height="20" ShowFractionalPart="False"/>
+                    </Border>
+                    <Border Grid.Row="6" Grid.Column="3">
+                        <StackPanel Orientation="Horizontal">
+                            <Slider x:Name="SliderNoteTintIntensityCol1" Minimum="0" Maximum="1" Width="70" VerticalAlignment="Center" ValueChanged="SliderNoteTintIntensityCol1_ValueChanged" MouseDoubleClick="SliderNoteTintIntensityCol1_MouseDoubleClick"/>
+                            <Label Content="{Binding ElementName=SliderNoteTintIntensityCol1, Path=Value}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="6" Grid.Column="4">
+                        <Button x:Name="ButtonResetNoteCol1" Width="40" Click="ButtonResetNoteCol1_Click">Reset</Button>
                     </Border>
 
-                    <Border Grid.Row="4" Grid.Column="2">
-                        <colorpicker:PortableColorPicker x:Name="ColorNote" Height="20" ShowFractionalPart="False"/>
+                    <Border Grid.Row="7" Grid.Column="0">
+                        <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center">Notes D3</TextBlock>
+                    </Border>
+                    <Border Grid.Row="7" Grid.Column="1">
+                        <CheckBox x:Name="CheckNoteCol2" HorizontalAlignment="Center" VerticalAlignment="Center" Click="CheckNoteCol2_Click"/>
+                    </Border>
+                    <Border Grid.Row="7" Grid.Column="2">
+                        <colorpicker:PortableColorPicker x:Name="ColorNoteCol2" Height="20" ShowFractionalPart="False"/>
+                    </Border>
+                    <Border Grid.Row="7" Grid.Column="3">
+                        <StackPanel Orientation="Horizontal">
+                            <Slider x:Name="SliderNoteTintIntensityCol2" Minimum="0" Maximum="1" Width="70" VerticalAlignment="Center" ValueChanged="SliderNoteTintIntensityCol2_ValueChanged" MouseDoubleClick="SliderNoteTintIntensityCol2_MouseDoubleClick"/>
+                            <Label Content="{Binding ElementName=SliderNoteTintIntensityCol2, Path=Value}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="7" Grid.Column="4">
+                        <Button x:Name="ButtonResetNoteCol2" Width="40" Click="ButtonResetNoteCol2_Click">Reset</Button>
                     </Border>
 
-                    <Border Grid.Row="4" Grid.Column="4">
-                        <Button x:Name="ButtonResetNote" Width="40" Click="ButtonResetNote_Click">Reset</Button>
+                    <Border Grid.Row="8" Grid.Column="0">
+                        <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center">Notes D4</TextBlock>
                     </Border>
+                    <Border Grid.Row="8" Grid.Column="1">
+                        <CheckBox x:Name="CheckNoteCol3" HorizontalAlignment="Center" VerticalAlignment="Center" Click="CheckNoteCol3_Click"/>
+                    </Border>
+                    <Border Grid.Row="8" Grid.Column="2">
+                        <colorpicker:PortableColorPicker x:Name="ColorNoteCol3" Height="20" ShowFractionalPart="False"/>
+                    </Border>
+                    <Border Grid.Row="8" Grid.Column="3">
+                        <StackPanel Orientation="Horizontal">
+                            <Slider x:Name="SliderNoteTintIntensityCol3" Minimum="0" Maximum="1" Width="70" VerticalAlignment="Center" ValueChanged="SliderNoteTintIntensityCol3_ValueChanged" MouseDoubleClick="SliderNoteTintIntensityCol3_MouseDoubleClick"/>
+                            <Label Content="{Binding ElementName=SliderNoteTintIntensityCol3, Path=Value}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="8" Grid.Column="4">
+                        <Button x:Name="ButtonResetNoteCol3" Width="40" Click="ButtonResetNoteCol3_Click">Reset</Button>
+                    </Border>
+
+                    
 
                 </Grid>
-            </StackPanel>
+            </ScrollViewer>
         </DockPanel>
     </Grid>
 </Window>

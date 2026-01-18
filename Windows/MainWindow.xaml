@@ -75,6 +75,8 @@
                         <Separator />
                         <MenuItem x:Name="MenuItemUserGuide" Header="_User Guide" Click="MenuItemUserGuide_Click"/>
                         <MenuItem x:Name="MenuItemAboutPage" Header="_About Edda" Click="MenuItemAboutPage_Click"/>
+                        <Separator />
+                        <MenuItem x:Name="MenuItemKeyboardShortcuts" Header="_Keyboard Shortcuts" Click="MenuItemKeyboardShortcuts_Click"/>
                     </MenuItem>
                 </Menu>
             </StackPanel>
@@ -119,6 +121,11 @@
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -440,6 +447,8 @@
                                 <Border Grid.RowSpan="3" Grid.Column="1" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" BorderThickness="0,0,1,0"/>
                             </Grid>
                         </Expander>
+                        <Border BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" BorderThickness="0,0,0,1"/>
+                        
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -632,21 +641,22 @@
                             <Border Grid.Row="2" Grid.Column="1">
                                 <DockPanel>
                                     <TextBlock x:Name="txtSongVol" DockPanel.Dock="Right" Width="30" Margin="5 0 0 0">0%</TextBlock>
-                                    <Slider x:Name="sliderSongVol" Maximum="1" ValueChanged="SliderSongVol_ValueChanged" IsMoveToPointEnabled="True"/>
+                                    <Slider x:Name="sliderSongVol" Maximum="1" ValueChanged="SliderSongVol_ValueChanged" IsMoveToPointEnabled="True" MouseDoubleClick="SliderVolume_MouseDoubleClick"/>
                                 </DockPanel>
                             </Border>
 
                             <Border Grid.Row="3" Grid.Column="0">
-                                <TextBlock Padding="10 0 0 0" VerticalAlignment="Center">Note Volume</TextBlock>
+                                <TextBlock Padding="10 0 0 0" VerticalAlignment="Center">Notes Volume</TextBlock>
                             </Border>
 
                             <Border Grid.Row="3" Grid.Column="1">
                                 <DockPanel>
                                     <TextBlock x:Name="txtDrumVol" DockPanel.Dock="Right" Width="30" Margin="5 0 0 0">0%</TextBlock>
-                                    <Slider x:Name="sliderDrumVol" Maximum="1" ValueChanged="SliderDrumVol_ValueChanged" IsMoveToPointEnabled="True"/>
+                                    <Slider x:Name="sliderDrumVol" Maximum="1" ValueChanged="SliderDrumVol_ValueChanged" IsMoveToPointEnabled="True" MouseDoubleClick="SliderVolume_MouseDoubleClick"/>
                                 </DockPanel>
                             </Border>
 
+                            <!-- Song Speed and Metronome moved up into Playback -->
                             <Border Grid.Row="4" Grid.Column="0">
                                 <TextBlock Padding="10 0 0 0" VerticalAlignment="Center">Song Speed</TextBlock>
                             </Border>
@@ -668,48 +678,76 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- Per-Drum Volume stacked vertically -->
+                            <!-- Per-Drum Volumes section header -->
                             <Border Grid.Row="6" Grid.ColumnSpan="2" Margin="0 3 0 0">
+                                <TextBlock VerticalAlignment="Center" FontWeight="Bold" FontSize="14" FontFamily="Bahnschrift">Per-Drum Volumes</TextBlock>
+                            </Border>
+                            <Border Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Center">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Center" Width="46" Margin="2 0">
+                                        <TextBlock Text="D1" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="NoWrap" Width="46" FontSize="11"/>
+                                        <Slider x:Name="sliderDrum1Vol" Orientation="Vertical" Height="100" Maximum="1" ValueChanged="SliderDrum1Vol_ValueChanged" IsMoveToPointEnabled="True" MouseLeftButtonUp="sliderDrum1Vol_MouseLeftButtonUp" MouseDoubleClick="SliderVolume_MouseDoubleClick" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="txtDrum1Vol" Width="46" HorizontalAlignment="Center" TextAlignment="Center">0%</TextBlock>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Center" Width="46" Margin="2 0">
+                                        <TextBlock Text="D2" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="NoWrap" Width="46" FontSize="11"/>
+                                        <Slider x:Name="sliderDrum2Vol" Orientation="Vertical" Height="100" Maximum="1" ValueChanged="SliderDrum2Vol_ValueChanged" IsMoveToPointEnabled="True" MouseLeftButtonUp="sliderDrum2Vol_MouseLeftButtonUp" MouseDoubleClick="SliderVolume_MouseDoubleClick" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="txtDrum2Vol" Width="46" HorizontalAlignment="Center" TextAlignment="Center">0%</TextBlock>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Vertical" HorizontalAlignment="Center" Width="46" Margin="2 0">
+                                        <TextBlock Text="D3" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="NoWrap" Width="46" FontSize="11"/>
+                                        <Slider x:Name="sliderDrum3Vol" Orientation="Vertical" Height="100" Maximum="1" ValueChanged="SliderDrum3Vol_ValueChanged" IsMoveToPointEnabled="True" MouseLeftButtonUp="sliderDrum3Vol_MouseLeftButtonUp" MouseDoubleClick="SliderVolume_MouseDoubleClick" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="txtDrum3Vol" Width="46" HorizontalAlignment="Center" TextAlignment="Center">0%</TextBlock>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" Orientation="Vertical" HorizontalAlignment="Center" Width="46" Margin="2 0">
+                                        <TextBlock Text="D4" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="NoWrap" Width="46" FontSize="11"/>
+                                        <Slider x:Name="sliderDrum4Vol" Orientation="Vertical" Height="100" Maximum="1" ValueChanged="SliderDrum4Vol_ValueChanged" IsMoveToPointEnabled="True" MouseLeftButtonUp="sliderDrum4Vol_MouseLeftButtonUp" MouseDoubleClick="SliderVolume_MouseDoubleClick" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="txtDrum4Vol" Width="46" HorizontalAlignment="Center" TextAlignment="Center">0%</TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Row="8" Grid.ColumnSpan="2" Margin="0 3 0 0">
                                 <TextBlock VerticalAlignment="Center" FontWeight="Bold" FontSize="14" FontFamily="Bahnschrift">Editing Grid</TextBlock>
                             </Border>
 
-                            <Border Grid.Row="7" Grid.Column="0">
+                            <Border Grid.Row="9" Grid.Column="0">
                                 <TextBlock Padding="10 0 0 0" VerticalAlignment="Center">Snap to Grid</TextBlock>
                             </Border>
 
-                            <Border Grid.Row="7" Grid.Column="1">
+                            <Border Grid.Row="9" Grid.Column="1">
                                 <StackPanel Orientation="Horizontal">
                                     <CheckBox x:Name="checkGridSnap" VerticalAlignment="Center" Click="CheckGridSnap_Click" IsChecked="True"></CheckBox>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Row="8" Grid.Column="0">
+                            <Border Grid.Row="10" Grid.Column="0">
                                 <TextBlock Padding="10 0 0 0" VerticalAlignment="Center">Beat Division</TextBlock>
                             </Border>
 
-                            <Border Grid.Row="8" Grid.Column="1">
+                            <Border Grid.Row="10" Grid.Column="1">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Margin="0 0 3 0" VerticalAlignment="Center">1/</TextBlock>
                                     <TextBox Width="30" x:Name="txtGridDivision" LostFocus="TxtGridDivision_LostFocus" KeyDown="TxtGridDivision_KeyDown" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Row="9" Grid.Column="0">
+                            <Border Grid.Row="11" Grid.Column="0">
                                 <TextBlock Padding="10 0 0 0" VerticalAlignment="Center">Grid Spacing</TextBlock>
                             </Border>
 
-                            <Border Grid.Row="9" Grid.Column="1" Padding="5 5 10 5">
+                            <Border Grid.Row="11" Grid.Column="1" Padding="5 5 10 5">
                                 <TextBox x:Name="txtGridSpacing" HorizontalAlignment="Left" Width="30" LostFocus="TxtGridSpacing_LostFocus" KeyDown="TxtGridSpacing_KeyDown"/>
                             </Border>
 
-                            <Border Grid.Row="10" Grid.Column="0">
-                                <TextBlock Padding="10 0 0 0" FontSize="11" VerticalAlignment="Bottom">Grid Waveform</TextBlock>
-                            </Border>
-
-                            <Border Grid.Row="10" Grid.Column="1">
-                                <StackPanel Orientation="Horizontal">
-                                    <CheckBox x:Name="checkWaveform" VerticalAlignment="Center" Click="CheckWaveform_Click" IsChecked="False"></CheckBox>
-                                </StackPanel>
-                            </Border>
+                            
                         </Grid>
                     </StackPanel>
                 </ScrollViewer>
@@ -737,7 +775,10 @@
                     <Canvas x:Name="canvasNavInputBox"/>
                 </Grid>
             </Border>
-            <Grid Grid.Column="1" MaxWidth="600">
+            <Grid x:Name="gridMapping" Grid.Column="1" MaxWidth="600">
+                <Grid.RenderTransform>
+                    <TranslateTransform X="0" Y="0"/>
+                </Grid.RenderTransform>
                 <!-- Static Renders -->
                 <Grid x:Name="EditorMarginGrid" Margin="50 0 50 0">
                     <Grid Background="#0A000000">
@@ -847,7 +888,7 @@
                         </ScrollViewer>
                     </Grid>
                 </Border>
-                <GridSplitter x:Name="spectrogramResize" Grid.Column="1" ResizeBehavior="PreviousAndCurrent" HorizontalAlignment="Left" VerticalAlignment="Stretch" ShowsPreview="False" Width="3"/>
+                <GridSplitter x:Name="spectrogramResize" Grid.Column="1" ResizeBehavior="PreviousAndCurrent" HorizontalAlignment="Left" VerticalAlignment="Stretch" ShowsPreview="False" Width="3" DragDelta="SpectrogramResize_DragDelta" DragCompleted="SpectrogramResize_DragCompleted"/>
             </Grid>
         </Grid>
     </DockPanel>

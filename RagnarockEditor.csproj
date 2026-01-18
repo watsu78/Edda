@@ -7,6 +7,9 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <AssemblyName>Edda</AssemblyName>
     <SelfContained>true</SelfContained>
+    <!-- Startup performance improvements -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <TieredPGO>true</TieredPGO>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
     <RootNamespace>Edda</RootNamespace>

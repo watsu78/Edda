@@ -19,6 +19,8 @@ public class ParallelAudioPlayer : IDisposable {
     WasapiOut[] notePlayers;
     public bool isEnabled { get; set; }
     public bool isPanned { get; set; }
+    float[] channelVolumes = new float[numChannels];
+    float masterVolume = 1.0f;
 
     public ParallelAudioPlayer(MMDevice playbackDevice, string basePath, int streams, int desiredLatency, bool isEnabled, bool isPanned, float defaultVolume) {
         lastPlayedStream = 0;
@@ -35,7 +37,11 @@ public class ParallelAudioPlayer : IDisposable {
         if (uniqueSamples < 1) {
             throw new FileNotFoundException($"Couldn't find the file {GetFilePath(basePath, uniqueSamples + 1)}");
         }
-        InitAudioOut(defaultVolume);
+        masterVolume = Math.Max(0f, Math.Min(1f, defaultVolume));
+        for (int c = 0; c < numChannels; c++) {
+            channelVolumes[c] = 1.0f;
+        }
+        InitAudioOut(masterVolume);
     }
 
     public void InitAudioOut(float defaultVolume) {
@@ -44,7 +50,7 @@ public class ParallelAudioPlayer : IDisposable {
         lastPlayedTimes = new DateTime[streams];
         for (int i = 0; i < streams; i++) {
             noteStreams[i] = new AudioFileReader(GetFilePath(basePath, (i % numChannels % uniqueSamples) + 1)) {
-                Volume = defaultVolume
+                Volume = channelVolumes[i % numChannels] * masterVolume
             };
             notePlayers[i] = new WasapiOut(playbackDevice, AudioClientShareMode.Shared, true, desiredLatency);
             if (isPanned && basePath != "mmatick") {
@@ -94,8 +100,19 @@ public class ParallelAudioPlayer : IDisposable {
         return false;
     }
     public void ChangeVolume(double vol) {
+        masterVolume = (float)Math.Min(Math.Abs(vol), 1);
         for (int i = 0; i < streams; i++) {
-            noteStreams[i].Volume = (float)Math.Min(Math.Abs(vol), 1);
+            noteStreams[i].Volume = masterVolume * channelVolumes[i % numChannels];
+        }
+    }
+    public void ChangeChannelVolume(int channel, double vol) {
+        if (channel < 0 || channel >= numChannels) return;
+        var v = (float)Math.Min(Math.Abs(vol), 1);
+        channelVolumes[channel] = v;
+        for (int i = 0; i < streams; i++) {
+            if (i % numChannels == channel) {
+                noteStreams[i].Volume = masterVolume * v;
+            }
         }
     }
     public void Dispose() {

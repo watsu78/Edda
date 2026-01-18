@@ -3,6 +3,7 @@ using Microsoft.WindowsAPICodePack.Dialogs;
 using NAudio.CoreAudioApi;
 using System;
 using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -43,81 +44,11 @@ namespace Edda {
             checkSpectrogramFlipped.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.SpectrogramFlipped);
             checkSpectrogramChunking.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.SpectrogramChunking);
             checkStartupUpdate.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.CheckForUpdates);
-            comboMapSaveFolder.SelectedIndex = int.Parse(userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationIndex));
-            txtMapSaveFolderPath.Text = (comboMapSaveFolder.SelectedIndex == 0) ? Program.DocumentsMapFolder : userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationPath);
-            txtMapSaveFolderPath.TextTrimming = TextTrimming.CharacterEllipsis;
-            txtMapSaveFolderPath.Cursor = Cursors.Hand;
-            ToggleMapPathVisibility();
+            var savedMapPath = userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationPath);
+            txtMapSaveFolderPath.Text = string.IsNullOrEmpty(savedMapPath) ? Program.DocumentsMapFolder : savedMapPath;
             doneInit = true;
         }
-
-        private void CheckShowSpectrogram_Click(object sender, RoutedEventArgs e) {
-            bool newStatus = CheckShowSpectrogram.IsChecked ?? false;
-            ToggleSpectrogramOptionsVisibility();
-            userSettings.SetValueForKey(UserSettingsKey.EnableSpectrogram, newStatus);
-            UpdateSettings();
-        }
-
-        private void TxtDefaultMapper_LostFocus(object sender, RoutedEventArgs e) {
-            userSettings.SetValueForKey(UserSettingsKey.DefaultMapper, txtDefaultMapper.Text);
-            UpdateSettings();
-        }
-
-        private void TxtDefaultNoteSpeed_LostFocus(object sender, RoutedEventArgs e) {
-            double noteSpeed;
-            double prevNoteSpeed = double.Parse(userSettings.GetValueForKey(UserSettingsKey.DefaultNoteSpeed));
-            if (double.TryParse(txtDefaultNoteSpeed.Text, out noteSpeed)) {
-                userSettings.SetValueForKey(UserSettingsKey.DefaultNoteSpeed, noteSpeed);
-                UpdateSettings();
-            } else {
-                MessageBox.Show(this, $"The note speed must be numerical.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                noteSpeed = prevNoteSpeed;
-            }
-            txtDefaultNoteSpeed.Text = noteSpeed.ToString();
-        }
-
-        private void TxtDefaultGridSpacing_LostFocus(object sender, RoutedEventArgs e) {
-            double gridSpacing;
-            double prevGridSpacing = double.Parse(userSettings.GetValueForKey(UserSettingsKey.DefaultGridSpacing));
-            if (double.TryParse(txtDefaultGridSpacing.Text, out gridSpacing)) {
-                userSettings.SetValueForKey(UserSettingsKey.DefaultGridSpacing, gridSpacing);
-                UpdateSettings();
-            } else {
-                MessageBox.Show(this, $"The grid spacing must be numerical.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                gridSpacing = prevGridSpacing;
-            }
-            txtDefaultGridSpacing.Text = gridSpacing.ToString();
-        }
-
-        private void ComboNotePasteBehavior_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            userSettings.SetValueForKey(UserSettingsKey.NotePasteBehavior, ((NotePasteBehavior)comboNotePasteBehavior.SelectedItem).Value);
-            if (doneInit) {
-                UpdateSettings();
-            }
-        }
-        private void InitComboNotePasteBehavior() {
-            string selectedNotePasteBehavior = userSettings.GetValueForKey(UserSettingsKey.NotePasteBehavior) ?? DefaultUserSettings.NotePasteBehavior;
-            NotePasteBehavior[] notePasteBehaviors = [
-                new(Editor.NotePasteBehavior.AlignToGlobalBeat, "Align to global beat"),
-                new(Editor.NotePasteBehavior.AlignToFirstNoteBPM, "Align to first note BPM"),
-                new(Editor.NotePasteBehavior.AlignToNoteBPM, "Align to all notes BPM")
-            ];
-            foreach (var notePasteBehavior in notePasteBehaviors) {
-                int i = comboNotePasteBehavior.Items.Add(notePasteBehavior);
-                if (notePasteBehavior.Value == selectedNotePasteBehavior) {
-                    comboNotePasteBehavior.SelectedIndex = i;
-                }
-            }
-        }
-
-        private void ComboPlaybackDevice_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (doneInit) {
-                var newPlaybackDeviceID = ((PlaybackDevice)comboPlaybackDevice.SelectedItem).ID;
-                caller.UpdatePlaybackDevice(newPlaybackDeviceID, string.IsNullOrEmpty(newPlaybackDeviceID));
-                userSettings.SetValueForKey(UserSettingsKey.PlaybackDeviceID, newPlaybackDeviceID);
-                UpdateSettings();
-            }
-        }
+        
         private void InitComboPlaybackDevices() {
             int i;
             if (caller.defaultDeviceAvailable) {
@@ -206,6 +137,67 @@ namespace Edda {
             userSettings.SetValueForKey(UserSettingsKey.DefaultNoteVolume, sliderDrumVol.Value);
             UpdateSettings();
         }
+
+        // General settings handlers re-added after refactor
+        private void CheckShowSpectrogram_Click(object sender, RoutedEventArgs e) {
+            bool newStatus = CheckShowSpectrogram.IsChecked ?? false;
+            ToggleSpectrogramOptionsVisibility();
+            userSettings.SetValueForKey(UserSettingsKey.EnableSpectrogram, newStatus);
+            UpdateSettings();
+        }
+        private void TxtDefaultMapper_LostFocus(object sender, RoutedEventArgs e) {
+            userSettings.SetValueForKey(UserSettingsKey.DefaultMapper, txtDefaultMapper.Text);
+            UpdateSettings();
+        }
+        private void TxtDefaultNoteSpeed_LostFocus(object sender, RoutedEventArgs e) {
+            string prev = userSettings.GetValueForKey(UserSettingsKey.DefaultNoteSpeed);
+            double speed;
+            if (double.TryParse(txtDefaultNoteSpeed.Text, out speed) && speed > 0) {
+                userSettings.SetValueForKey(UserSettingsKey.DefaultNoteSpeed, speed);
+                UpdateSettings();
+            } else {
+                MessageBox.Show(this, "The note speed must be a positive number.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                txtDefaultNoteSpeed.Text = prev;
+            }
+        }
+        private void TxtDefaultGridSpacing_LostFocus(object sender, RoutedEventArgs e) {
+            string prev = userSettings.GetValueForKey(UserSettingsKey.DefaultGridSpacing);
+            int spacing;
+            if (int.TryParse(txtDefaultGridSpacing.Text, out spacing) && spacing > 0) {
+                userSettings.SetValueForKey(UserSettingsKey.DefaultGridSpacing, spacing);
+                UpdateSettings();
+            } else {
+                MessageBox.Show(this, "The grid spacing must be a positive integer.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                txtDefaultGridSpacing.Text = prev;
+            }
+        }
+        private void ComboNotePasteBehavior_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (comboNotePasteBehavior.SelectedItem is NotePasteBehaviorOption npb) {
+                userSettings.SetValueForKey(UserSettingsKey.NotePasteBehavior, npb.Value);
+                UpdateSettings();
+            }
+        }
+        private void InitComboNotePasteBehavior() {
+            string selected = userSettings.GetValueForKey(UserSettingsKey.NotePasteBehavior);
+            int idx = -1;
+            idx = comboNotePasteBehavior.Items.Add(new NotePasteBehaviorOption(global::Edda.Const.Editor.NotePasteBehavior.AlignToGlobalBeat, "Align to Global Beat"));
+            if (selected == global::Edda.Const.Editor.NotePasteBehavior.AlignToGlobalBeat) comboNotePasteBehavior.SelectedIndex = idx;
+            idx = comboNotePasteBehavior.Items.Add(new NotePasteBehaviorOption(global::Edda.Const.Editor.NotePasteBehavior.AlignToFirstNoteBPM, "Align to First Note BPM"));
+            if (selected == global::Edda.Const.Editor.NotePasteBehavior.AlignToFirstNoteBPM) comboNotePasteBehavior.SelectedIndex = idx;
+            idx = comboNotePasteBehavior.Items.Add(new NotePasteBehaviorOption(global::Edda.Const.Editor.NotePasteBehavior.AlignToNoteBPM, "Align to Note BPM"));
+            if (string.IsNullOrEmpty(selected) || selected == global::Edda.Const.Editor.NotePasteBehavior.AlignToNoteBPM) comboNotePasteBehavior.SelectedIndex = idx;
+        }
+        private void ComboPlaybackDevice_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (comboPlaybackDevice.SelectedItem is PlaybackDevice pd) {
+                userSettings.SetValueForKey(UserSettingsKey.PlaybackDeviceID, pd.ID);
+                UpdateSettings();
+                caller.PauseSong();
+                caller.RestartDrummer();
+                caller.RestartMetronome();
+            }
+        }
+
+
 
         // Spectrogram options
         private void ToggleSpectrogramOptionsVisibility() {
@@ -320,26 +312,50 @@ namespace Edda {
             UpdateSettings();
         }
 
-        private void comboMapSaveFolder_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+        
 
-            if (comboMapSaveFolder.SelectedIndex == 1) {
-                string gameInstall = PickGameFolder();
-                if (gameInstall == null) {
-                    comboMapSaveFolder.SelectedIndex = 0;
-                    userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationPath, DefaultUserSettings.MapSaveLocationPath);
-                } else {
-                    txtMapSaveFolderPath.Text = gameInstall;
-                    userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationPath, gameInstall);
-                }
+        // Browse button for selecting an arbitrary map save folder
+        private void BtnBrowseMapSaveFolder_Click(object sender, RoutedEventArgs e) {
+            var d = new CommonOpenFileDialog();
+            d.Title = "Select the folder to save your maps";
+            d.IsFolderPicker = true;
+            var prevPath = userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationPath);
+            if (!string.IsNullOrEmpty(prevPath) && Directory.Exists(prevPath)) {
+                d.InitialDirectory = prevPath;
+            } else if (!string.IsNullOrEmpty(Program.DocumentsMapFolder) && Directory.Exists(Program.DocumentsMapFolder)) {
+                d.InitialDirectory = Program.DocumentsMapFolder;
             }
-
-            ToggleMapPathVisibility();
-            userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationIndex, comboMapSaveFolder.SelectedIndex.ToString());
+            if (d.ShowDialog() != CommonFileDialogResult.Ok) {
+                return;
+            }
+            // create directory if it doesn't exist
+            if (!Directory.Exists(d.FileName)) {
+                Directory.CreateDirectory(d.FileName);
+            }
+            txtMapSaveFolderPath.Text = d.FileName;
+            // mark as custom selection
+            userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationIndex, 1);
+            userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationPath, d.FileName);
             UpdateSettings();
         }
 
+
         private void BtnSave_Click(object sender, RoutedEventArgs e) {
             Close();
+        }
+
+        private void BtnResetLayout_Click(object sender, RoutedEventArgs e) {
+            try {
+                // Reset spectrogram width to default and persist
+                userSettings.SetValueForKey(UserSettingsKey.SpectrogramWidth, DefaultUserSettings.SpectrogramWidth);
+                UpdateSettings();
+                // Apply immediately in the caller
+                if (caller != null && caller.gridSpectrogram?.ColumnDefinitions?.Count > 0) {
+                    caller.gridSpectrogram.ColumnDefinitions[0].Width = new GridLength(DefaultUserSettings.SpectrogramWidth);
+                }
+            } catch {
+                // ignore reset errors
+            }
         }
 
         private void UpdateSettings() {
@@ -347,44 +363,23 @@ namespace Edda {
             caller.LoadSettingsFile(true);
         }
 
-        private void txtMapSaveFolderPath_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            string gameInstall = PickGameFolder();
-            if (gameInstall == null) {
-                return;
-            } else {
-                userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationPath, gameInstall);
-            }
-            UpdateSettings();
-        }
-
-        private string PickGameFolder() {
-            var d = new CommonOpenFileDialog();
-            d.Title = "Select the folder that Ragnarock is installed in";
-            d.IsFolderPicker = true;
-            var prevGamePath = userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationPath);
-            if (Directory.Exists(prevGamePath)) {
-                d.InitialDirectory = prevGamePath;
-            }
-            if (d.ShowDialog() != CommonFileDialogResult.Ok) {
-                return null;
-            }
-
-            // make custom song game folder if it doesnt exist
-            var songFolder = Path.Combine(d.FileName, Program.GameInstallRelativeMapFolder);
-            if (!Directory.Exists(songFolder)) {
-                Directory.CreateDirectory(songFolder);
-            }
-
-            return d.FileName;
-        }
-
-        private void ToggleMapPathVisibility() {
-            if (comboMapSaveFolder.SelectedIndex == 0) {
-                txtMapSaveFolderPath.Visibility = Visibility.Collapsed;
-            } else {
-                txtMapSaveFolderPath.Visibility = Visibility.Visible;
+        private void TxtMapSaveFolderPath_LostFocus(object sender, RoutedEventArgs e) {
+            var path = txtMapSaveFolderPath.Text;
+            if (!string.IsNullOrWhiteSpace(path)) {
+                try {
+                    if (!Directory.Exists(path)) {
+                        Directory.CreateDirectory(path);
+                    }
+                    userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationIndex, 1);
+                    userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationPath, path);
+                    UpdateSettings();
+                } catch (Exception ex) {
+                    MessageBox.Show(this, $"Unable to set map save path: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
+
+        // Removed game install picker and toggle; replaced by free-path selection
 
         class PlaybackDevice {
             public string ID { get; private set; }
@@ -399,7 +394,7 @@ namespace Edda {
             }
         }
 
-        class NotePasteBehavior(string value, string label) {
+        class NotePasteBehaviorOption(string value, string label) {
             public string Value { get; private set; } = value;
             public string Label { get; private set; } = label;
         }

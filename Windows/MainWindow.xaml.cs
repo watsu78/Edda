@@ -21,6 +21,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Path = System.IO.Path;
 using Timer = System.Timers.Timer;
 
@@ -124,6 +125,7 @@ namespace Edda {
         public IDifficultyPredictor difficultyPredictor = DifficultyPredictorPKBeam.SINGLETON;
 
         DoubleAnimation songPlayAnim;            // used for animating scroll when playing a song
+        
         double prevScrollPercent = 0;       // percentage of scroll progress before the scroll viewport was changed
 
         // audio playback
@@ -151,6 +153,13 @@ namespace Edda {
         ParallelAudioPlayer metronome;
         NoteScanner noteScanner;
         BeatScanner beatScanner;
+
+        
+
+        // Drum volume model: master + per-drum baselines
+        double drumMaster = 1.0;
+        double[] drumBaselines = new double[4] { 1.0, 1.0, 1.0, 1.0 };
+        bool suppressDrumSliderHandlers = false;
 
         IDisposable scrollEditorSizeChangedDebounce;
         IDisposable borderNavWaveformSizeChangedDebounce;
@@ -254,7 +263,11 @@ namespace Edda {
                         BorderSpectrogram_SizeChanged(eventPattern.Sender, eventPattern.EventArgs)
                     )
                 );
+
+            
         }
+
+        
 
 
         // map file I/O functions
@@ -557,6 +570,27 @@ namespace Edda {
 
             sliderSongVol.Value = float.Parse(userSettings.GetValueForKey(UserSettingsKey.DefaultSongVolume));
             sliderDrumVol.Value = float.Parse(userSettings.GetValueForKey(UserSettingsKey.DefaultNoteVolume));
+            drumMaster = sliderDrumVol.Value;
+            // Initialize per-drum sliders from settings (fallback to defaults if missing)
+            double GetOrDefault(string key, double defVal) {
+                var v = userSettings.GetValueForKey(key);
+                if (string.IsNullOrEmpty(v)) return defVal;
+                double dv; return double.TryParse(v, out dv) ? dv : defVal;
+            }
+            drumBaselines[0] = GetOrDefault(UserSettingsKey.NoteVolumeDrum0, double.Parse(userSettings.GetValueForKey(UserSettingsKey.DefaultNoteVolume)));
+            drumBaselines[1] = GetOrDefault(UserSettingsKey.NoteVolumeDrum1, double.Parse(userSettings.GetValueForKey(UserSettingsKey.DefaultNoteVolume)));
+            drumBaselines[2] = GetOrDefault(UserSettingsKey.NoteVolumeDrum2, double.Parse(userSettings.GetValueForKey(UserSettingsKey.DefaultNoteVolume)));
+            drumBaselines[3] = GetOrDefault(UserSettingsKey.NoteVolumeDrum3, double.Parse(userSettings.GetValueForKey(UserSettingsKey.DefaultNoteVolume)));
+            suppressDrumSliderHandlers = true;
+            sliderDrum1Vol.Value = drumBaselines[0] * drumMaster;
+            sliderDrum2Vol.Value = drumBaselines[1] * drumMaster;
+            sliderDrum3Vol.Value = drumBaselines[2] * drumMaster;
+            sliderDrum4Vol.Value = drumBaselines[3] * drumMaster;
+            suppressDrumSliderHandlers = false;
+            txtDrum1Vol.Text = $"{(int)(sliderDrum1Vol.Value * 100)}%";
+            txtDrum2Vol.Text = $"{(int)(sliderDrum2Vol.Value * 100)}%";
+            txtDrum3Vol.Text = $"{(int)(sliderDrum3Vol.Value * 100)}%";
+            txtDrum4Vol.Text = $"{(int)(sliderDrum4Vol.Value * 100)}%";
 
             // map settings
             txtSongName.Text = (string)mapEditor.GetMapValue("_songName");
@@ -565,12 +599,11 @@ namespace Edda {
             txtSongBPM.Text = (string)mapEditor.GetMapValue("_beatsPerMinute");
             txtSongOffset.Text = (string)mapEditor.GetMapValue("_songTimeOffset");
             checkExplicitContent.IsChecked = (string)mapEditor.GetMapValue("_explicit") == "true";
-            checkWaveform.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.EnableSpectrogram) != true;
             comboEnvironment.SelectedIndex = BeatmapDefaults.EnvironmentNames.IndexOf((string)mapEditor.GetMapValue("_environmentName"));
             MenuItemSnapToGrid.IsChecked = (checkGridSnap.IsChecked == true);
             mapEditor.SongDuration = songStream.TotalTime.TotalSeconds;
             mapEditor.GlobalBPM = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_beatsPerMinute"));
-            gridController.showWaveform = (checkWaveform.IsChecked == true);
+            gridController.showWaveform = userSettings.GetBoolForKey(UserSettingsKey.EnableSpectrogram) != true;
             songTempoStream.Tempo = sliderSongTempo.Value;
             var songPath = Path.Combine(mapEditor.mapFolder, (string)mapEditor.GetMapValue("_songFilename"));
             gridController.InitWaveforms(songPath);
@@ -615,7 +648,6 @@ namespace Edda {
             txtDistMedal2.IsEnabled = true;
             txtGridDivision.IsEnabled = true;
             txtGridSpacing.IsEnabled = true;
-            checkWaveform.IsEnabled = true;
             btnDeleteDifficulty.IsEnabled = true;
             btnSongPlayer.IsEnabled = true;
             sliderSongProgress.IsEnabled = true;
@@ -651,7 +683,6 @@ namespace Edda {
             txtDistMedal2.IsEnabled = false;
             txtGridDivision.IsEnabled = false;
             txtGridSpacing.IsEnabled = false;
-            checkWaveform.IsEnabled = false;
             btnDeleteDifficulty.IsEnabled = false;
             btnSongPlayer.IsEnabled = false;
             sliderSongProgress.IsEnabled = false;
@@ -701,6 +732,13 @@ namespace Edda {
 
             if (userSettings.GetValueForKey(UserSettingsKey.EnableSpectrogram) == null) {
                 userSettings.SetValueForKey(UserSettingsKey.EnableSpectrogram, DefaultUserSettings.EnableSpectrogram);
+            }
+
+            // Spectrogram width persistence
+            try {
+                double.Parse(userSettings.GetValueForKey(UserSettingsKey.SpectrogramWidth));
+            } catch {
+                userSettings.SetValueForKey(UserSettingsKey.SpectrogramWidth, DefaultUserSettings.SpectrogramWidth);
             }
 
             if (userSettings.GetValueForKey(UserSettingsKey.DefaultMapper) == null) {
@@ -753,6 +791,35 @@ namespace Edda {
                 userSettings.SetValueForKey(UserSettingsKey.DefaultNoteVolume, DefaultUserSettings.DefaultNoteVolume);
             }
 
+            // Ensure per-drum defaults are seeded to 100% on first run
+            if (userSettings.GetValueForKey(UserSettingsKey.NoteVolumeDrum0) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum0, DefaultUserSettings.NoteVolumeDrum0);
+            }
+            if (userSettings.GetValueForKey(UserSettingsKey.NoteVolumeDrum1) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum1, DefaultUserSettings.NoteVolumeDrum1);
+            }
+            if (userSettings.GetValueForKey(UserSettingsKey.NoteVolumeDrum2) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum2, DefaultUserSettings.NoteVolumeDrum2);
+            }
+            if (userSettings.GetValueForKey(UserSettingsKey.NoteVolumeDrum3) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.NoteVolumeDrum3, DefaultUserSettings.NoteVolumeDrum3);
+            }
+
+            // Seed per-column nav note colors (default to global NavNoteColor)
+            string globalNavNoteColor = userSettings.GetValueForKey(UserSettingsKey.NavNoteColor) ?? Editor.NavNote.Colour;
+            if (userSettings.GetValueForKey(UserSettingsKey.NavNoteColorCol0) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteColorCol0, globalNavNoteColor);
+            }
+            if (userSettings.GetValueForKey(UserSettingsKey.NavNoteColorCol1) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteColorCol1, globalNavNoteColor);
+            }
+            if (userSettings.GetValueForKey(UserSettingsKey.NavNoteColorCol2) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteColorCol2, globalNavNoteColor);
+            }
+            if (userSettings.GetValueForKey(UserSettingsKey.NavNoteColorCol3) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.NavNoteColorCol3, globalNavNoteColor);
+            }
+
             if (userSettings.GetValueForKey(UserSettingsKey.SpectrogramCache) == null) {
                 userSettings.SetValueForKey(UserSettingsKey.SpectrogramCache, DefaultUserSettings.SpectrogramCache);
             }
@@ -791,12 +858,14 @@ namespace Edda {
                 userSettings.SetValueForKey(UserSettingsKey.CheckForUpdates, DefaultUserSettings.CheckForUpdates);
             }
 
+            // (Scroll Sync by Timer removed)
+
             try {
-                var index = int.Parse(userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationIndex));
-                // game install directory chosen
-                var gameInstallPath = userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationPath);
-                if (index == 1 && !Directory.Exists(gameInstallPath)) {
-                    throw new Exception();
+                // validate index format only; allow arbitrary custom paths
+                int.Parse(userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationIndex));
+                var mapPath = userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationPath);
+                if (string.IsNullOrEmpty(mapPath)) {
+                    userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationPath, DefaultUserSettings.MapSaveLocationPath);
                 }
             } catch {
                 userSettings.SetValueForKey(UserSettingsKey.MapSaveLocationIndex, DefaultUserSettings.MapSaveLocationIndex);
@@ -845,8 +914,18 @@ namespace Edda {
                 userSettings.SetValueForKey(UserSettingsKey.NavBPMChangeShadowOpacity, Editor.NavBPMChange.ShadowOpacity);
             }
 
-            if (userSettings.GetValueForKey(UserSettingsKey.EnableNavNotes) == null) {
-                userSettings.SetValueForKey(UserSettingsKey.EnableNavNotes, DefaultUserSettings.EnableNavNotes);
+            // Initialize per-column nav notes visibility defaults
+            if (userSettings.GetValueForKey(UserSettingsKey.EnableNavNotesCol0) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.EnableNavNotesCol0, DefaultUserSettings.EnableNavNotesCol0);
+            }
+            if (userSettings.GetValueForKey(UserSettingsKey.EnableNavNotesCol1) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.EnableNavNotesCol1, DefaultUserSettings.EnableNavNotesCol1);
+            }
+            if (userSettings.GetValueForKey(UserSettingsKey.EnableNavNotesCol2) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.EnableNavNotesCol2, DefaultUserSettings.EnableNavNotesCol2);
+            }
+            if (userSettings.GetValueForKey(UserSettingsKey.EnableNavNotesCol3) == null) {
+                userSettings.SetValueForKey(UserSettingsKey.EnableNavNotesCol3, DefaultUserSettings.EnableNavNotesCol3);
             }
 
             userSettings.Write();
@@ -861,6 +940,19 @@ namespace Edda {
                 gridSpectrogram.Visibility = Visibility.Visible;
             } else {
                 gridSpectrogram.Visibility = Visibility.Collapsed;
+            }
+
+            // Apply persisted spectrogram width if available
+            try {
+                if (gridSpectrogram?.ColumnDefinitions?.Count > 0) {
+                    if (double.TryParse(userSettings.GetValueForKey(UserSettingsKey.SpectrogramWidth), out double savedWidth)) {
+                        double minContent = gridSpectrogram.ColumnDefinitions[0].MinWidth;
+                        double widthToApply = Math.Max(minContent, savedWidth);
+                        gridSpectrogram.ColumnDefinitions[0].Width = new GridLength(widthToApply);
+                    }
+                }
+            } catch {
+                // ignore if early during layout
             }
 
             var cacheSpectrogram = userSettings.GetBoolForKey(UserSettingsKey.SpectrogramCache);
@@ -890,6 +982,8 @@ namespace Edda {
                 gridController.DrawSpectrogram();
             }
 
+            // (Scroll Sync by Timer removed)
+
             difficultyPredictor = userSettings.GetValueForKey(UserSettingsKey.DifficultyPredictorAlgorithm) switch {
                 DifficultyPrediction.SupportedAlgorithms.PKBeam => DifficultyPredictorPKBeam.SINGLETON,
                 DifficultyPrediction.SupportedAlgorithms.Nytilde => DifficultyPredictorNytilde.SINGLETON,
@@ -916,7 +1010,16 @@ namespace Edda {
             canvasBookmarkLabels.Visibility = userSettings.GetBoolForKey(UserSettingsKey.EnableNavBookmarks) ? Visibility.Visible : Visibility.Hidden;
             canvasTimingChanges.Visibility = userSettings.GetBoolForKey(UserSettingsKey.EnableNavBPMChanges) ? Visibility.Visible : Visibility.Hidden;
             canvasTimingChangeLabels.Visibility = userSettings.GetBoolForKey(UserSettingsKey.EnableNavBPMChanges) ? Visibility.Visible : Visibility.Hidden;
-            canvasNavNotes.Visibility = userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotes) ? Visibility.Visible : Visibility.Hidden;
+            bool anyNavNotesEnabled =
+                userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotesCol0) ||
+                userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotesCol1) ||
+                userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotesCol2) ||
+                userSettings.GetBoolForKey(UserSettingsKey.EnableNavNotesCol3);
+            canvasNavNotes.Visibility = anyNavNotesEnabled ? Visibility.Visible : Visibility.Hidden;
+
+            // Re-anchor and clamp to ensure visual constraints after settings apply
+            AnchorMappingCenter();
+            ClampSpectrogramToMapping();
         }
 
         internal string GetUserSetting(string key) {
@@ -966,6 +1069,8 @@ namespace Edda {
                 Helper.FileDeleteIfExists(newPath);
                 // copy image file over
                 File.Copy(sourceFile, newPath);
+                // enforce maximum cover size (500x500)
+                Helper.ResizeImageToMax(newPath, 500, 500);
 
                 mapEditor.SetMapValue("_coverImageFilename", newFile);
                 SaveBeatmap();
@@ -988,6 +1093,8 @@ namespace Edda {
             if (string.IsNullOrEmpty(fileName)) {
                 ClearCoverImage();
             } else {
+                // enforce maximum cover size before loading
+                Helper.ResizeImageToMax(filePath, 600, 600);
                 // Need to ignore cache, since we replace the contents of the cover.* file.
                 BitmapImage b = Helper.BitmapGenerator(new Uri(filePath), true);
                 imgCover.Source = b;
@@ -1208,8 +1315,14 @@ namespace Edda {
                 songPlayer = new WasapiOut(device, AudioClientShareMode.Shared, true, Audio.WASAPILatencyTarget);
                 songPlayer.Init(songChannel);
 
-                // subscribe to playbackstopped
-                songPlayer.PlaybackStopped += (sender, args) => { PauseSong(); };
+                // subscribe to playbackstopped on UI thread to avoid cross-thread crashes
+                songPlayer.PlaybackStopped += (sender, args) => {
+                    try {
+                        Dispatcher.Invoke(() => PauseSong());
+                    } catch {
+                        // ignore if dispatcher is shutting down
+                    }
+                };
             } else {
                 songPlayer = null;
             }
@@ -1263,15 +1376,12 @@ namespace Edda {
             // hide editor
             gridController.SetPreviewNoteVisibility(Visibility.Hidden);
 
-            // animate for smooth scrolling 
+            // animate for smooth scrolling (use WPF DoubleAnimation)
             var remainingTimeSpan = songStream.TotalTime - songStream.CurrentTime;
-
-            // note: the DoubleAnimation induces a desync of around 0.1 seconds
             songPlayAnim = new DoubleAnimation();
             songPlayAnim.From = sliderSongProgress.Value;
             songPlayAnim.To = sliderSongProgress.Maximum;
             songPlayAnim.Duration = new Duration(remainingTimeSpan / songTempoStream.Tempo);
-            //Timeline.SetDesiredFrameRate(songPlayAnim, animationFramerate);
             sliderSongProgress.BeginAnimation(Slider.ValueProperty, songPlayAnim);
 
             noteScanner.Start((int)(sliderSongProgress.Value - editorAudioLatency), new List<Note>(gridController.currentMapDifficultyNotes), globalBPM);
@@ -1296,7 +1406,7 @@ namespace Edda {
             //songPlayer.Play();
         }
         internal void PauseSong() {
-            songPlaybackCancellationTokenSource.Cancel();
+            try { songPlaybackCancellationTokenSource?.Cancel(); } catch { }
             if (!songIsPlaying) {
                 return;
             }
@@ -1323,6 +1433,7 @@ namespace Edda {
             // reset scroll animation
             songPlayAnim.BeginTime = null;
             sliderSongProgress.BeginAnimation(Slider.ValueProperty, null);
+            // (Scroll Sync by Timer removed)
 
             // show editor
             gridController.SetPreviewNoteVisibility(Visibility.Visible);
@@ -1396,7 +1507,8 @@ namespace Edda {
 
         // drawing functions for the editor grid
         internal void DrawEditorGrid(bool redrawWaveform = true) {
-            gridController.DrawGrid(redrawWaveform);
+            // Coalesce frequent redraw requests (interactive default ~16ms)
+            gridController.RequestRedraw(redrawWaveform);
         }
 
         // helper functions
@@ -1465,7 +1577,12 @@ namespace Edda {
                     MessageBox.Show(this, $"{ex.Message}. Make sure Edda.exe is next to Resources folder and you're starting Edda from the directory where Edda.exe is stored.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     Close();
                 }
-                drummer.ChangeVolume(sliderDrumVol.Value);
+                // Apply master and per-drum baselines
+                drummer.ChangeVolume(drumMaster);
+                drummer.ChangeChannelVolume(0, drumBaselines[0]);
+                drummer.ChangeChannelVolume(1, drumBaselines[1]);
+                drummer.ChangeChannelVolume(2, drumBaselines[2]);
+                drummer.ChangeChannelVolume(3, drumBaselines[3]);
                 noteScanner?.SetAudioPlayer(drummer);
             } else {
                 drummer = null;
