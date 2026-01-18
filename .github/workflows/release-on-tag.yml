@@ -1,0 +1,66 @@
+name: Release on Tag
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore RagnarockEditor.sln
+
+      - name: Publish self-contained single-file (win-x64)
+        run: >
+          dotnet publish RagnarockEditor.csproj -c Release -r win-x64
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:PublishReadyToRun=true
+          -p:TieredPGO=true
+          --self-contained true
+
+      - name: Package zip (exe + Resources)
+        shell: pwsh
+        run: |
+          $publishDir = Resolve-Path '.\\bin\\Release\\net8.0-windows\\win-x64\\publish'
+          $stageDir = Join-Path $PWD "EDDA-${{ github.ref_name }}"
+          if (Test-Path $stageDir) { Remove-Item $stageDir -Recurse -Force }
+          New-Item -ItemType Directory -Path $stageDir | Out-Null
+          $exe = Get-ChildItem -Path $publishDir -Filter *.exe | Select-Object -First 1
+          if (-not $exe) { throw 'No exe found in publish directory.' }
+          Copy-Item $exe.FullName -Destination (Join-Path $stageDir $exe.Name) -Force
+          if (Test-Path (Join-Path $publishDir 'Resources')) {
+            Copy-Item (Join-Path $publishDir 'Resources') -Destination (Join-Path $stageDir 'Resources') -Recurse -Force
+          }
+          $zipPath = Join-Path $PWD "EDDA-${{ github.ref_name }}-win-x64.zip"
+          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+          Compress-Archive -Path (Join-Path $stageDir '*') -DestinationPath $zipPath -Force
+          Write-Host "Packaged $zipPath"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EDDA-${{ github.ref_name }}-win-x64
+          path: EDDA-${{ github.ref_name }}-win-x64.zip
+
+      - name: Publish GitHub Release for tag
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: EDDA-${{ github.ref_name }}
+          artifacts: EDDA-${{ github.ref_name }}-win-x64.zip
+          allowUpdates: true
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
