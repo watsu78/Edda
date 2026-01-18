@@ -11,8 +11,8 @@ namespace Edda.Const {
     public static class Program {
 
         public const string Name = "Edda";
-        public const string RepositoryURL = "https://github.com/PKBeam/Edda";
-        public const string ReleasesAPI = "https://api.github.com/repos/PKBeam/Edda/releases";
+        public const string RepositoryURL = "https://github.com/watsu78/Edda";
+        public const string ReleasesAPI = "https://api.github.com/repos/watsu78/Edda/releases";
         public const string BaseVersionString = "1.2.7";
         public const string VersionString =
 #if DEBUG
@@ -32,7 +32,7 @@ namespace Edda.Const {
         public const int MaxRecentOpenedMaps = 10;
         public static string DocumentsMapFolder => Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Ragnarock"), "CustomSongs");
         public static string GameInstallRelativeMapFolder => Path.Combine("Ragnarock", "CustomSongs");
-        public const string UserGuideURL = "https://pkbeam.github.io/Edda/";
+        public const string UserGuideURL = "https://watsu78.github.io/Edda/";
         public const string OldSettingsFile = "settings.txt";
         public const string ResourcesPath = "Resources/";
         public const string BackupPath = "autosaves";
