@@ -13,7 +13,7 @@ namespace Edda.Const {
         public const string Name = "Edda";
         public const string RepositoryURL = "https://github.com/watsu78/Edda";
         public const string ReleasesAPI = "https://api.github.com/repos/watsu78/Edda/releases";
-        public const string BaseVersionString = "2.0.0";
+        public const string BaseVersionString = "2.0.1";
         public const string VersionString =
 #if DEBUG
             BaseVersionString + "-dev";
