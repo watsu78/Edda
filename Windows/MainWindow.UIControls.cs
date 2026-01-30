@@ -145,6 +145,17 @@ namespace Edda {
 
             // ctrl shortcuts
             if (ctrlKeyDown) {
+                // offset nudge (Ctrl+Shift+Left/Right)
+                if (shiftKeyDown && (e.Key == Key.Left || e.Key == Key.Right)) {
+                    double offset = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_songTimeOffset"));
+                    offset += (e.Key == Key.Left ? -10.0 : 10.0);
+                    mapEditor.SetMapValue("_songTimeOffset", offset);
+                    txtSongOffset.Text = offset.ToString();
+                    UpdateOffsetBeatsText(offset);
+                    gridController.SetDisplayOffsetMs(offset);
+                    e.Handled = true;
+                    return;
+                }
                 // new map (Ctrl-N)
                 if (e.Key == Key.N) {
                     PauseSong();
@@ -568,7 +579,11 @@ namespace Edda {
             var offset = (1 - percentage) * scrollEditor.ScrollableHeight;
             scrollEditor.ScrollToVerticalOffset(offset);
 
-            var newLineY = borderNavWaveform.ActualHeight * (1 - percentage);
+            double offMs = 0.0;
+            try { offMs = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_songTimeOffset")); } catch { offMs = 0.0; }
+            double totalMs = sliderSongProgress.Maximum;
+            double clamped = Math.Max(0, Math.Min(totalMs, sliderSongProgress.Value - offMs));
+            var newLineY = borderNavWaveform.ActualHeight * (1 - (clamped / totalMs));
             lineSongProgress.Y1 = newLineY;
             lineSongProgress.Y2 = newLineY;
 
@@ -640,6 +655,38 @@ namespace Edda {
                 offset = prevOffset;
             }
             txtSongOffset.Text = offset.ToString();
+            UpdateOffsetBeatsText(offset);
+            // Apply visual changes immediately
+            gridController.SetDisplayOffsetMs(offset);
+        }
+
+        private void BtnOffsetMinus_Click(object sender, RoutedEventArgs e) {
+            double offset = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_songTimeOffset"));
+            offset -= 10.0; // nudge -10ms
+            mapEditor.SetMapValue("_songTimeOffset", offset);
+            txtSongOffset.Text = offset.ToString();
+            UpdateOffsetBeatsText(offset);
+            gridController.SetDisplayOffsetMs(offset);
+        }
+
+        private void BtnOffsetPlus_Click(object sender, RoutedEventArgs e) {
+            double offset = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_songTimeOffset"));
+            offset += 10.0; // nudge +10ms
+            mapEditor.SetMapValue("_songTimeOffset", offset);
+            txtSongOffset.Text = offset.ToString();
+            UpdateOffsetBeatsText(offset);
+            gridController.SetDisplayOffsetMs(offset);
+        }
+
+        private void UpdateOffsetBeatsText(double offsetMs) {
+            double bpm = globalBPM;
+            if (bpm > 0) {
+                double beatMs = 60000.0 / bpm;
+                double beats = offsetMs / beatMs;
+                txtOffsetBeats.Text = $"≈ {beats.ToString("0.00")} beat(s)";
+            } else {
+                txtOffsetBeats.Text = "";
+            }
         }
         private void TxtSongName_TextChanged(object sender, TextChangedEventArgs e) {
             mapEditor.SetMapValue("_songName", txtSongName.Text);

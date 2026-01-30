@@ -100,8 +100,10 @@ public enum MoveNote {
 }
 
 public class MapEditor : IDisposable {
+    // indicate if user applied the offset
+    public bool offsetAppliedToAudio = false;
     public string mapFolder;
-    RagnarockMap beatMap;
+    internal RagnarockMap beatMap;
     MainWindow parent;
     double globalBPM;
     public int defaultGridDivision;

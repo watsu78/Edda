@@ -11,7 +11,12 @@ namespace RagnarockEditor {
         internal UserSettingsManager UserSettings;
         internal DiscordClient DiscordClient;
 
-        App() {
+        public App() {
+            // global Handler for non handled exceptions
+            this.DispatcherUnhandledException += (sender, args) => {
+                MessageBox.Show($"Exception non gérée :\n{args.Exception}", "Erreur critique", MessageBoxButton.OK, MessageBoxImage.Error);
+                args.Handled = true;
+            };
             this.RecentMaps = new(Program.RecentOpenedMapsFile, Program.MaxRecentOpenedMaps);
             this.UserSettings = new UserSettingsManager(Program.SettingsFile);
             this.DiscordClient = new DiscordClient();

@@ -189,12 +189,20 @@
                             hidden for now because I don't know if Ragnarock actually uses this, 
                             and mappers should be syncing up audio before mapping anyway 
                         -->
-                        <Border Grid.Row="7" Grid.Column="0" Visibility="Collapsed">
+                        <Border Grid.Row="7" Grid.Column="0">
                             <TextBlock Padding="10 0 0 0">Song Offset</TextBlock>
                         </Border>
 
-                        <Border Grid.Row="7" Grid.Column="1" Visibility="Collapsed">
-                            <TextBox x:Name="txtSongOffset" Grid.Row="0" Grid.Column="1" LostFocus="TxtSongOffset_LostFocus" />
+                        <Border Grid.Row="7" Grid.Column="1">
+                            <StackPanel Orientation="Vertical">
+                                <TextBox x:Name="txtSongOffset" Width="60" Grid.Row="0" Grid.Column="1" LostFocus="TxtSongOffset_LostFocus"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <Button x:Name="btnOffsetMinus" Padding="6,0" Click="BtnOffsetMinus_Click">-10 ms</Button>
+                                    <Button x:Name="btnOffsetPlus" Margin="5,0,0,0" Padding="6,0" Click="BtnOffsetPlus_Click">+10 ms</Button>
+                                    <TextBlock x:Name="txtOffsetBeats" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button x:Name="btnApplyOffsetAudio" Margin="0,6,0,0" Padding="6,2" Click="BtnApplyOffsetAudio_Click">Apply offset</Button>
+                            </StackPanel>
                         </Border>
 
                     </Grid>
@@ -747,7 +755,14 @@
                                 <TextBox x:Name="txtGridSpacing" HorizontalAlignment="Left" Width="30" LostFocus="TxtGridSpacing_LostFocus" KeyDown="TxtGridSpacing_KeyDown"/>
                             </Border>
 
-                            
+                            <Border Grid.Row="12" Grid.Column="0">
+                                <TextBlock Padding="10 0 0 0" VerticalAlignment="Center">Waveform</TextBlock>
+                            </Border>
+
+                            <!-- Waveform Display Toggle Checkbox in Editing Grid -->
+                            <Border Grid.Row="12" Grid.Column="1">
+                                <CheckBox x:Name="checkShowWaveform" IsChecked="True" Checked="CheckShowWaveform_Checked" Unchecked="CheckShowWaveform_Unchecked"/>
+                            </Border>
                         </Grid>
                     </StackPanel>
                 </ScrollViewer>

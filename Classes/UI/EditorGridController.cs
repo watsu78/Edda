@@ -84,6 +84,9 @@ public class EditorGridController : IDisposable {
     public bool spectrogramFlipped = false;
     public bool? spectrogramChunking = null;
 
+    // display offset in milliseconds, applied to visual audio layers (waveform/spectrogram)
+    private double displayOffsetMs = 0.0;
+
     // dynamically added controls
     Border dragSelectBorder = new();
     Line lineGridMouseover = new();
@@ -412,6 +415,18 @@ public class EditorGridController : IDisposable {
         // No retained gridlines initialization; gridlines are drawn as individual Line elements
     }
 
+    // external API: set display offset (ms) and refresh affected visuals
+    public void SetDisplayOffsetMs(double offsetMs) {
+        displayOffsetMs = offsetMs;
+        ApplyDisplayOffsetToImages();
+        // Refresh overlays that depend on offset-based time mapping
+        if (mapEditor?.currentMapDifficulty != null) {
+            DrawNavBookmarks();
+            DrawNavBPMChanges();
+            DrawNavNotes(mapEditor.currentMapDifficulty.notes);
+        }
+    }
+
     public void SetMouseoverLinePosition(double newPos) {
         lineGridMouseover.Y1 = newPos;
         lineGridMouseover.Y2 = newPos;
@@ -491,6 +506,7 @@ public class EditorGridController : IDisposable {
                 if (bmp != null && showWaveform) {
                     imgAudioWaveform.Source = bmp;
                     ResizeMainWaveform();
+                    ApplyDisplayOffsetToImages();
                 }
             });
         }, token);
@@ -513,6 +529,7 @@ public class EditorGridController : IDisposable {
                 this.dispatcher.Invoke(() => {
                     if (token.IsCancellationRequested) return;
                     imgWaveformVertical.Source = bmp;
+                    ApplyDisplayOffsetToImages();
                 });
             }
         }, token);
@@ -589,9 +606,40 @@ public class EditorGridController : IDisposable {
                     var spectrogramBackgroundBrush = new SolidColorBrush(MediaColor.FromArgb(bgColor.A, bgColor.R, bgColor.G, bgColor.B));
                     canvasSpectrogramLowerOffset.Background = spectrogramBackgroundBrush;
                     canvasSpectrogramUpperOffset.Background = spectrogramBackgroundBrush;
+                    ApplyDisplayOffsetToImages();
                 });
             }
         }, token);
+    }
+
+    // Apply current displayOffsetMs as Y-translate to waveform/spectrogram images
+    private void ApplyDisplayOffsetToImages() {
+        try {
+            // Nav waveform shift based on total duration
+            if (parentWindow?.songTotalTimeInSeconds.HasValue == true && borderNavWaveform != null && imgWaveformVertical != null) {
+                double totalMs = parentWindow.songTotalTimeInSeconds.Value * 1000.0;
+                if (totalMs > 0 && borderNavWaveform.ActualHeight > 0) {
+                    double pxPerMsNav = borderNavWaveform.ActualHeight / totalMs;
+                    double dy = displayOffsetMs * pxPerMsNav;
+                    imgWaveformVertical.RenderTransform = new TranslateTransform(0, dy);
+                }
+            }
+
+            // Main waveform and spectrogram shift use beat-scaling height
+            if (imgAudioWaveform != null) {
+                double pxPerMsMain = (mapEditor != null) ? (mapEditor.GlobalBPM * unitLength) / 60000.0 : 0.0;
+                double dy = displayOffsetMs * pxPerMsMain;
+                imgAudioWaveform.RenderTransform = new TranslateTransform(0, dy);
+            }
+
+            if (imgSpectrogramChunks != null) {
+                double pxPerMsSpec = (mapEditor != null) ? (mapEditor.GlobalBPM * unitLength) / 60000.0 : 0.0;
+                double dy = displayOffsetMs * pxPerMsSpec;
+                foreach (var img in imgSpectrogramChunks) {
+                    if (img != null) img.RenderTransform = new TranslateTransform(0, dy);
+                }
+            }
+        } catch { /* ignore visual-only errors */ }
     }
 
     // grid drawing
@@ -616,7 +664,11 @@ public class EditorGridController : IDisposable {
 
         // then draw the waveform
         if (redrawWaveform && EditorGrid.Height - scrollEditor.ActualHeight > 0) {
-            DrawScrollingWaveforms();
+            if (showWaveform) {
+                DrawScrollingWaveforms();
+            } else {
+                UndrawMainWaveform();
+            }
         }
 
         // then draw the notes
@@ -933,7 +985,11 @@ public class EditorGridController : IDisposable {
         // Add/update current bookmarks
         foreach (Bookmark b in mapEditor.currentMapDifficulty.bookmarks) {
             double beat = b.beat;
-            double y = borderNavWaveform.ActualHeight * (1 - 60000 * beat / (mapEditor.GlobalBPM * parentWindow.songTotalTimeInSeconds.Value * 1000));
+            // apply display offset (ms) to nav mapping
+            double totalMs = parentWindow.songTotalTimeInSeconds.Value * 1000.0;
+            double beatMs = 60000.0 * beat / mapEditor.GlobalBPM;
+            double tMs = Math.Max(0, Math.Min(totalMs, beatMs - displayOffsetMs));
+            double y = borderNavWaveform.ActualHeight * (1 - tMs / totalMs);
 
             // line
             if (!navBookmarkLines.TryGetValue(beat, out var l)) {
@@ -1002,7 +1058,10 @@ public class EditorGridController : IDisposable {
         // Add/update current bpm changes
         foreach (BPMChange b in mapEditor.currentMapDifficulty.bpmChanges) {
             double beat = b.globalBeat;
-            double y = borderNavWaveform.ActualHeight * (1 - 60000 * beat / (mapEditor.GlobalBPM * parentWindow.songTotalTimeInSeconds.Value * 1000));
+            double totalMs2 = parentWindow.songTotalTimeInSeconds.Value * 1000.0;
+            double beatMs2 = 60000.0 * beat / mapEditor.GlobalBPM;
+            double tMs2 = Math.Max(0, Math.Min(totalMs2, beatMs2 - displayOffsetMs));
+            double y = borderNavWaveform.ActualHeight * (1 - tMs2 / totalMs2);
 
             // line
             if (!navBpmLines.TryGetValue(beat, out var l)) {
@@ -1229,8 +1288,11 @@ public class EditorGridController : IDisposable {
                 using var ctx = colGeoms[c].Open();
                 foreach (var n in notes) {
                     if (n.col != c) continue;
-                    // position
-                    var verticalOffset = borderNavWaveform.ActualHeight * (1 - 60000 * n.beat / (mapEditor.GlobalBPM * parentWindow.songTotalTimeInSeconds.Value * 1000));
+                    // position (apply display offset)
+                    double totalMs = parentWindow.songTotalTimeInSeconds.Value * 1000.0;
+                    double beatMs = 60000.0 * n.beat / mapEditor.GlobalBPM;
+                    double tMs = Math.Max(0, Math.Min(totalMs, beatMs - displayOffsetMs));
+                    var verticalOffset = borderNavWaveform.ActualHeight * (1 - tMs / totalMs);
                     double x = xBase + c * (Editor.NavNote.ColumnGap + Editor.NavNote.Size);
                     double y = verticalOffset - Editor.NavNote.Size / 2.0;
                     // geometry rectangle
@@ -1664,7 +1726,10 @@ public class EditorGridController : IDisposable {
         if (!double.TryParse(parentWindow.GetUserSetting(UserSettingsKey.NavBookmarkShadowOpacity), out var shadowOpacity)) {
             shadowOpacity = Editor.NavBookmark.ShadowOpacity;
         }
-        var offset = borderNavWaveform.ActualHeight * (1 - 60000 * b.beat / (mapEditor.GlobalBPM * parentWindow.songTotalTimeInSeconds.Value * 1000));
+        double totalMs = parentWindow.songTotalTimeInSeconds.Value * 1000.0;
+        double beatMs = 60000.0 * b.beat / mapEditor.GlobalBPM;
+        double tMs = Math.Max(0, Math.Min(totalMs, beatMs - displayOffsetMs));
+        var offset = borderNavWaveform.ActualHeight * (1 - tMs / totalMs);
         var txtBlock = new TextBlock {
             Text = b.name
         };
@@ -1772,7 +1837,10 @@ public class EditorGridController : IDisposable {
             });
             return label;
         }
-        var offset = borderNavWaveform.ActualHeight * (1 - 60000 * b.globalBeat / (mapEditor.GlobalBPM * parentWindow.songTotalTimeInSeconds.Value * 1000));
+        double totalMs2 = parentWindow.songTotalTimeInSeconds.Value * 1000.0;
+        double beatMsBpm = 60000.0 * b.globalBeat / mapEditor.GlobalBPM;
+        double tMsBpm = Math.Max(0, Math.Min(totalMs2, beatMsBpm - displayOffsetMs));
+        var offset = borderNavWaveform.ActualHeight * (1 - tMsBpm / totalMs2);
         var divLabel = makeBPMChangeLabel($"1/{b.gridDivision} beat");
         Canvas.SetBottom(divLabel, borderNavWaveform.ActualHeight - offset);
         divLabel.MouseRightButtonUp += new MouseButtonEventHandler((src, e) => {

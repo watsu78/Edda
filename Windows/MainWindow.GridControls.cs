@@ -23,7 +23,11 @@ namespace Edda {
 
         private void BorderNavWaveform_SizeChanged(object sender, SizeChangedEventArgs e) {
             if (mapIsLoaded) {
-                var lineY = sliderSongProgress.Value / sliderSongProgress.Maximum * borderNavWaveform.ActualHeight;
+                double offMs = 0.0;
+                try { offMs = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_songTimeOffset")); } catch { offMs = 0.0; }
+                double totalMs = sliderSongProgress.Maximum;
+                double clamped = Math.Max(0, Math.Min(totalMs, sliderSongProgress.Value - offMs));
+                var lineY = (1 - (clamped / totalMs)) * borderNavWaveform.ActualHeight;
                 gridController.DrawNavWaveform();
                 gridController.DrawNavBookmarks();
                 gridController.DrawNavBPMChanges();

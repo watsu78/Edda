@@ -32,6 +32,102 @@ using Timer = System.Timers.Timer;
 
 namespace Edda {
     public partial class MainWindow : Window {
+        // Event handler for waveform display checkbox
+        private void CheckShowWaveform_Checked(object sender, RoutedEventArgs e)
+        {
+            if (gridController != null)
+            {
+                gridController.showWaveform = true;
+                gridController.RequestRedraw(true); // redraw grid and waveform
+            }
+        }
+
+        private void CheckShowWaveform_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (gridController != null)
+            {
+                gridController.showWaveform = false;
+                gridController.RequestRedraw(true); // redraw grid and remove waveform
+            }
+        }
+        private void BtnApplyOffsetAudio_Click(object sender, RoutedEventArgs e)
+        {
+            // Close all audio streams
+            try { songPlayer?.Stop(); songPlayer?.Dispose(); songPlayer = null; } catch { }
+            try { songStream?.Dispose(); songStream = null; } catch { }
+            try { songTempoStream?.Dispose(); songTempoStream = null; } catch { }
+
+            string songFilename = (string)mapEditor.GetMapValue("_songFilename");
+            if (!string.IsNullOrEmpty(songFilename))
+            {
+                string audioPath = Path.Combine(mapEditor.mapFolder, songFilename);
+                if (File.Exists(audioPath))
+                {
+                    double offsetMs = 0;
+                    try { offsetMs = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_songTimeOffset")); } catch { offsetMs = 0; }
+                    if (Math.Abs(offsetMs) > 0.5)
+                    {
+                        string ext = Path.GetExtension(audioPath).ToLower();
+                        string tempAudio = Path.Combine(mapEditor.mapFolder, "__temp_offset_audio" + ext);
+                        string codec = "";
+                        switch (ext)
+                        {
+                            case ".ogg": codec = "-c:a libvorbis -q:a 6"; break; // Maximum Vorbis quality
+                            case ".mp3": codec = "-c:a libmp3lame -q:a 2"; break; // Maximum MP3 quality
+                            case ".wav": codec = "-c:a pcm_s16le"; break;
+                            default: codec = "-c:a copy"; break; // fallback: try to copy
+                        }
+                        string ffFilter = "";
+                        int exit = 1;
+                        if (offsetMs > 0) // Shift left: trim the beginning
+                        {
+                            double secs = offsetMs / 1000.0;
+                            ffFilter = $"-af \"atrim=start={secs},asetpts=PTS-STARTPTS\" {codec}";
+                        }
+                        else // Shift right: add silence
+                        {
+                            int ms = (int)Math.Round(Math.Abs(offsetMs));
+                            ffFilter = $"-af \"adelay={ms}|{ms}\" {codec}";
+                        }
+                        exit = Helper.FFmpeg(mapEditor.mapFolder, $"-i \"{audioPath}\" -y {ffFilter} \"{tempAudio}\"");
+                        if (exit == 0 && File.Exists(tempAudio))
+                        {
+                            File.Delete(audioPath);
+                            File.Move(tempAudio, audioPath);
+                            // Reset the offset in info.dat
+                            mapEditor.SetMapValue("_songTimeOffset", 0);
+                            mapEditor.offsetAppliedToAudio = true;
+                        }
+                        else
+                        {
+                            if (File.Exists(tempAudio)) File.Delete(tempAudio);
+                            MessageBox.Show(this, $"Error while applying offset to audio. The audio was not modified.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
+                }
+            }
+            mapEditor.SaveMap();
+            // Reload info.dat to synchronize the offset in memory and UI
+            try
+            {
+                mapEditor.beatMap.ReadInfo();
+                var refreshedOffset = mapEditor.GetMapValue("_songTimeOffset");
+                txtSongOffset.Text = refreshedOffset.ToString();
+                UpdateOffsetBeatsText(Helper.DoubleParseInvariant(refreshedOffset.ToString()));
+                // Force visual offset to 0 to guarantee alignment
+                gridController.SetDisplayOffsetMs(0);
+            }
+            catch { /* ignore si champ absent */ }
+            // Delete spectrogram cache
+            ClearSongCache();
+            // Reload audio stream
+            LoadSong();
+            // Regenerate waveform and spectrogram and force redraw
+            var songPath = Path.Combine(mapEditor.mapFolder, (string)mapEditor.GetMapValue("_songFilename"));
+            gridController.InitWaveforms(songPath);
+            gridController.RefreshSpectrogramWaveform();
+            gridController.RequestRedraw(true); // force redraw grid, waveform, spectrogram
+        }
 
         // COMPUTED PROPERTIES
         bool songIsPlaying {
@@ -521,7 +617,8 @@ namespace Edda {
                 };
                 string songFilename = (string)mapEditor.GetMapValue("_songFilename");
                 if (songFilename != null && File.Exists(Path.Combine(baseFolder, songFilename))) {
-                    copyFiles.Add(Path.Combine(baseFolder, songFilename));
+                    // Always generate audio for export (apply silence/trim based on offset)
+                    // so skip copying original here; it will be produced below.
                 }
                 string coverFilename = (string)mapEditor.GetMapValue("_coverImageFilename");
                 if (coverFilename != null && File.Exists(Path.Combine(baseFolder, coverFilename))) {
@@ -547,6 +644,58 @@ namespace Edda {
                 foreach (var file in copyFiles) {
                     File.Copy(file, Path.Combine(zipFolder, Path.GetFileName(file)));
                 }
+
+                // Appliquer l'offset à l'audio à l'export SEULEMENT si l'utilisateur ne l'a pas déjà appliqué
+                if (!string.IsNullOrEmpty(songFilename)) {
+                    string sourceAudio = Path.Combine(baseFolder, songFilename);
+                    string bakedAudio = Path.Combine(zipFolder, songFilename);
+                    double offsetMs = 0;
+                    try { offsetMs = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_songTimeOffset")); } catch { offsetMs = 0; }
+
+                    if (File.Exists(sourceAudio)) {
+                        if (!mapEditor.offsetAppliedToAudio && Math.Abs(offsetMs) > 0.5) {
+                            string ext = Path.GetExtension(sourceAudio).ToLower();
+                            string codec = "";
+                            switch (ext)
+                            {
+                                case ".ogg": codec = "-c:a libvorbis -q:a 6"; break; // Maximum Vorbis quality
+                                case ".mp3": codec = "-c:a libmp3lame -q:a 2"; break; // Maximum MP3 quality
+                                case ".wav": codec = "-c:a pcm_s16le"; break;
+                                default: codec = "-c:a copy"; break; // fallback: try to copy
+                            }
+                            string ffFilter = "";
+                            if (offsetMs > 0)
+                            {
+                                double secs = offsetMs / 1000.0;
+                                ffFilter = $"-af \"atrim=start={secs},asetpts=PTS-STARTPTS\" {codec}";
+                            }
+                            else
+                            {
+                                int ms = (int)Math.Round(Math.Abs(offsetMs));
+                                ffFilter = $"-af \"adelay={ms}|{ms}\" {codec}";
+                            }
+                            int exit = Helper.FFmpeg(baseFolder, $"-i \"{sourceAudio}\" -y {ffFilter} \"{bakedAudio}\"");
+                            if (exit != 0 || !File.Exists(bakedAudio))
+                            {
+                                MessageBox.Show(this, $"Failed to process audio for export. Exporting original file instead.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                File.Copy(sourceAudio, bakedAudio, true);
+                            }
+                        } else {
+                            File.Copy(sourceAudio, bakedAudio, true);
+                        }
+
+                        // Reset _songTimeOffset in exported info.dat
+                        try {
+                            string infoPath = Path.Combine(baseFolder, "info.dat");
+                            string infoZipPath = Path.Combine(zipFolder, "info.dat");
+                            var infoJson = File.ReadAllText(infoPath);
+                            var j = Newtonsoft.Json.Linq.JObject.Parse(infoJson);
+                            j["_songTimeOffset"] = 0;
+                            File.WriteAllText(infoZipPath, Newtonsoft.Json.JsonConvert.SerializeObject(j, Newtonsoft.Json.Formatting.Indented));
+                        } catch { }
+                    }
+                }
+
                 ZipFile.CreateFromDirectory(zipFolder, zipPath);
 
             } catch (Exception) {
@@ -598,15 +747,30 @@ namespace Edda {
             txtMapperName.Text = (string)mapEditor.GetMapValue("_levelAuthorName");
             txtSongBPM.Text = (string)mapEditor.GetMapValue("_beatsPerMinute");
             txtSongOffset.Text = (string)mapEditor.GetMapValue("_songTimeOffset");
+            try {
+                var offStr = (string)mapEditor.GetMapValue("_songTimeOffset");
+                UpdateOffsetBeatsText(Helper.DoubleParseInvariant(offStr));
+            } catch { txtOffsetBeats.Text = ""; }
             checkExplicitContent.IsChecked = (string)mapEditor.GetMapValue("_explicit") == "true";
             comboEnvironment.SelectedIndex = BeatmapDefaults.EnvironmentNames.IndexOf((string)mapEditor.GetMapValue("_environmentName"));
             MenuItemSnapToGrid.IsChecked = (checkGridSnap.IsChecked == true);
             mapEditor.SongDuration = songStream.TotalTime.TotalSeconds;
             mapEditor.GlobalBPM = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_beatsPerMinute"));
-            gridController.showWaveform = userSettings.GetBoolForKey(UserSettingsKey.EnableSpectrogram) != true;
+            // Set waveform checkbox and controller state
+            bool waveformEnabled = userSettings.GetBoolForKey(UserSettingsKey.EnableSpectrogram) != true;
+            gridController.showWaveform = waveformEnabled;
+            if (checkShowWaveform != null)
+                checkShowWaveform.IsChecked = waveformEnabled;
             songTempoStream.Tempo = sliderSongTempo.Value;
             var songPath = Path.Combine(mapEditor.mapFolder, (string)mapEditor.GetMapValue("_songFilename"));
             gridController.InitWaveforms(songPath);
+            // Apply initial visual offset to audio layers
+            try {
+                double initialOffset = 0.0;
+                var offStr = (string)mapEditor.GetMapValue("_songTimeOffset");
+                if (!string.IsNullOrEmpty(offStr)) initialOffset = Helper.DoubleParseInvariant(offStr);
+                gridController.SetDisplayOffsetMs(initialOffset);
+            } catch { /* ignore parse issues */ }
 
             // enable UI parts
             EnableUI();
@@ -1349,12 +1513,28 @@ namespace Edda {
             // toggle button appearance
             imgPlayerButton.Source = Helper.BitmapGenerator("pauseButton.png");
 
-            // set seek position for song
+            // set seek position for song with track offset applied
+            double trackOffsetMs = 0.0;
             try {
-                songStream.CurrentTime = TimeSpan.FromMilliseconds(sliderSongProgress.Value);
+                var offStr = (string)mapEditor.GetMapValue("_songTimeOffset");
+                trackOffsetMs = Helper.DoubleParseInvariant(offStr);
+            } catch { /* fall back to 0 */ }
+
+            double desiredMs = sliderSongProgress.Value + trackOffsetMs;
+            if (desiredMs < 0) desiredMs = 0;
+            if (songStream != null) {
+                var maxMs = songStream.TotalTime.TotalMilliseconds;
+                if (desiredMs > maxMs) desiredMs = maxMs;
+            }
+            try {
+                // Prefer setting on tempo stream to keep chain consistent
+                songTempoStream.CurrentTime = TimeSpan.FromMilliseconds(desiredMs);
+                // Also update underlying for safety
+                songStream.CurrentTime = TimeSpan.FromMilliseconds(desiredMs);
             } catch (Exception ex) {
-                Trace.WriteLine($"WARNING: Could not seek correctly on song ({ex})");
+                Trace.WriteLine($"WARNING: Could not seek correctly on song with offset ({ex})");
                 songStream.CurrentTime = TimeSpan.Zero;
+                songTempoStream.CurrentTime = TimeSpan.Zero;
             }
 
             // disable actions that would interrupt note scanning
