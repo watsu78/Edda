@@ -668,6 +668,9 @@ public class EditorGridController : IDisposable {
                 DrawScrollingWaveforms();
             } else {
                 UndrawMainWaveform();
+                if (showSpectrogram == true) {
+                    DrawSpectrogram();
+                }
             }
         }
 
