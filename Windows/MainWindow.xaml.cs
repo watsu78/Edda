@@ -82,7 +82,7 @@ namespace Edda {
                         if (offsetMs > 0) // Shift left: trim the beginning
                         {
                             double secs = offsetMs / 1000.0;
-                            ffFilter = $"-af \"atrim=start={secs},asetpts=PTS-STARTPTS\" {codec}";
+                            ffFilter = $"-af \"atrim=start={secs.ToString(System.Globalization.CultureInfo.InvariantCulture)},asetpts=PTS-STARTPTS\" {codec}";
                         }
                         else // Shift right: add silence
                         {
@@ -100,8 +100,14 @@ namespace Edda {
                         }
                         else
                         {
+                            string errorMsg = $"FFmpeg exit code: {exit}\n";
+                            if (!File.Exists(tempAudio))
+                                errorMsg += "Temp audio file not created. ";
+                            else
+                                errorMsg += "Temp audio file exists but FFmpeg failed. ";
+                            errorMsg += $"\nFFmpeg args: -i \"{audioPath}\" -y {ffFilter} \"{tempAudio}\"";
                             if (File.Exists(tempAudio)) File.Delete(tempAudio);
-                            MessageBox.Show(this, $"Error while applying offset to audio. The audio was not modified.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBox.Show(this, $"Error while applying offset to audio. The audio was not modified.\n{errorMsg}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                     }
                 }
