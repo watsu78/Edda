@@ -7,6 +7,28 @@ namespace Edda.Windows
 {
     public partial class AdvancedHistoryWindow : Window
     {
+        // highlight notes when selecting a history line
+        private void HistoryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var history = mapEditor?.currentMapDifficulty?.editorHistory;
+            if (history == null) return;
+            if (HistoryListBox.SelectedItem is HistoryRow row)
+            {
+                var allEdits = history.GetHistory();
+                if (row.RawIndex >= 0 && row.RawIndex < allEdits.Count)
+                {
+                    var editList = allEdits[row.RawIndex];
+                    var notes = new List<Edda.Classes.MapEditorNS.NoteNS.Note>();
+                    foreach (var edit in editList.items)
+                    {
+                        if (edit.item is Edda.Classes.MapEditorNS.NoteNS.Note note)
+                            notes.Add(note);
+                    }
+                    // Select and highlight the relevant notes
+                    mapEditor.SelectNewNotes(notes, false);
+                }
+            }
+        }
         private class HistoryRow
         {
             public int Index { get; set; }
@@ -21,6 +43,7 @@ namespace Edda.Windows
         {
             InitializeComponent();
             mapEditor = editor;
+            HistoryListBox.SelectionChanged += HistoryListBox_SelectionChanged;
             var history = mapEditor?.currentMapDifficulty?.editorHistory;
             if (history != null)
                 history.HistoryChanged += RefreshHistory;
