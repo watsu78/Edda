@@ -32,6 +32,12 @@ using Timer = System.Timers.Timer;
 
 namespace Edda {
     public partial class MainWindow : Window {
+        private void BtnAdvancedHistory_Click(object sender, RoutedEventArgs e)
+        {
+            var win = new Edda.Windows.AdvancedHistoryWindow(mapEditor);
+            win.Owner = this;
+            win.Show();
+        }
         // Event handler for waveform display checkbox
         private void CheckShowWaveform_Checked(object sender, RoutedEventArgs e)
         {

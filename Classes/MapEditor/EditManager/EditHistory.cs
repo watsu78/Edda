@@ -2,6 +2,16 @@
 using System.Collections.Generic;
 
 public class EditHistory<T> {
+            public event Action? HistoryChanged;
+        public List<EditList<T>> GetHistory()
+        {
+            return history;
+        }
+
+        public int GetCurrentIndex()
+        {
+            return currentIndex;
+        }
     private int bufferSize;
     private List<EditList<T>> history;
     private int currentIndex; // index of the edit item after the last action
@@ -19,6 +29,7 @@ public class EditHistory<T> {
         currentIndex++;
         // clear all of the "future" history
         history.RemoveRange(currentIndex, history.Count - currentIndex);
+        HistoryChanged?.Invoke();
     }
 
     // returns the edits that need to be applied on the object being tracked
@@ -26,7 +37,9 @@ public class EditHistory<T> {
         if (currentIndex == 0) {
             return new EditList<T>();
         }
-        return history[--currentIndex].Inverted();
+        var result = history[--currentIndex].Inverted();
+        HistoryChanged?.Invoke();
+        return result;
     }
 
     // returns the edits that need to be applied on the object being tracked
@@ -34,7 +47,9 @@ public class EditHistory<T> {
         if (currentIndex == history.Count) {
             return new EditList<T>();
         }
-        return history[currentIndex++];
+        var result = history[currentIndex++];
+        HistoryChanged?.Invoke();
+        return result;
     }
     public void Consolidate(int n) { // consolidate the last n entries into one
         EditList<T> e = new();
