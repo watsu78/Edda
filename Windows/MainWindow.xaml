@@ -635,6 +635,14 @@
                                         </Button.Resources>
                                         Customize Navigation Bar
                                     </Button>
+                                    <Button x:Name="btnAdvancedHistory" Width="199" Padding="3" Margin="0 5 0 0" HorizontalAlignment="Center" Click="BtnAdvancedHistory_Click">
+                                        <Button.Resources>
+                                            <Style TargetType="Border">
+                                                <Setter Property="CornerRadius" Value="5"/>
+                                            </Style>
+                                        </Button.Resources>
+                                        Advanced history
+                                    </Button>
                                 </StackPanel>
                             </Border>
 
