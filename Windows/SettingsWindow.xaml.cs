@@ -46,6 +46,7 @@ namespace Edda {
             checkStartupUpdate.IsChecked = userSettings.GetBoolForKey(UserSettingsKey.CheckForUpdates);
             var savedMapPath = userSettings.GetValueForKey(UserSettingsKey.MapSaveLocationPath);
             txtMapSaveFolderPath.Text = string.IsNullOrEmpty(savedMapPath) ? Program.DocumentsMapFolder : savedMapPath;
+            txtAudioQualityConversion.Text = userSettings.GetValueForKey("ExportQuality") ?? "6";
             doneInit = true;
         }
         
@@ -377,6 +378,28 @@ namespace Edda {
                     MessageBox.Show(this, $"Unable to set map save path: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+        }
+
+        private void TxtAudioQualityConversion_LostFocus(object sender, RoutedEventArgs e) {
+            string prev = userSettings.GetValueForKey("ExportQuality");
+            int quality;
+            string input = txtAudioQualityConversion.Text.Trim();
+            if (string.IsNullOrEmpty(input)) {
+                quality = 6;
+                txtAudioQualityConversion.Text = "6";
+                userSettings.SetValueForKey("ExportQuality", quality);
+                UpdateSettings();
+            } else if (int.TryParse(input, out quality) && quality >= 1 && quality <= 10) {
+                userSettings.SetValueForKey("ExportQuality", quality);
+                UpdateSettings();
+            } else {
+                MessageBox.Show(this, "Audio quality must be an integer between 1 et 10.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                txtAudioQualityConversion.Text = prev;
+            }
+        }
+
+        private void TxtAudioQualityConversion_PreviewTextInput(object sender, RoutedEventArgs e) {
+
         }
 
         // Removed game install picker and toggle; replaced by free-path selection
