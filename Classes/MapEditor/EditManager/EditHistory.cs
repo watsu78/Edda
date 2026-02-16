@@ -2,16 +2,14 @@
 using System.Collections.Generic;
 
 public class EditHistory<T> {
-            public event Action? HistoryChanged;
-        public List<EditList<T>> GetHistory()
-        {
-            return history;
-        }
+    public event Action? HistoryChanged;
+    public List<EditList<T>> GetHistory() {
+        return history;
+    }
 
-        public int GetCurrentIndex()
-        {
-            return currentIndex;
-        }
+    public int GetCurrentIndex() {
+        return currentIndex;
+    }
     private int bufferSize;
     private List<EditList<T>> history;
     private int currentIndex; // index of the edit item after the last action

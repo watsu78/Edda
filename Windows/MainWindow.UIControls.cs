@@ -112,7 +112,7 @@ namespace Edda {
             songPreviewController = null;
             oldSongPreviewController?.Dispose();
 
-            
+
 
             userSettings?.Clear();
             userSettings = null;
@@ -433,17 +433,17 @@ namespace Edda {
         private void BtnChangeDifficulty1_Click(object sender, RoutedEventArgs e) {
             SwitchDifficultyMap(1);
         }
-                private void MenuItemKeyboardShortcuts_Click(object sender, RoutedEventArgs e) {
-                    var win = Helper.GetFirstWindow<KeyboardShortcutsWindow>();
-                    if (win == null) {
-                        win = new KeyboardShortcutsWindow();
-                        win.Owner = this;
-                        win.Topmost = true;
-                        win.Show();
-                    } else {
-                        win.Focus();
-                    }
-                }
+        private void MenuItemKeyboardShortcuts_Click(object sender, RoutedEventArgs e) {
+            var win = Helper.GetFirstWindow<KeyboardShortcutsWindow>();
+            if (win == null) {
+                win = new KeyboardShortcutsWindow();
+                win.Owner = this;
+                win.Topmost = true;
+                win.Show();
+            } else {
+                win.Focus();
+            }
+        }
         private void BtnChangeDifficulty2_Click(object sender, RoutedEventArgs e) {
             SwitchDifficultyMap(2);
         }

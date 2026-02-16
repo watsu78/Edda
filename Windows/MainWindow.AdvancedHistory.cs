@@ -1,7 +1,6 @@
-using System.Windows;
 using Edda.Classes.MapEditorNS;
+using System.Windows;
 
-namespace Edda
-{
+namespace Edda {
     // ...existing code...
 }

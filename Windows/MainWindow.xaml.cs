@@ -32,52 +32,42 @@ using Timer = System.Timers.Timer;
 
 namespace Edda {
     public partial class MainWindow : Window {
-        private void BtnAdvancedHistory_Click(object sender, RoutedEventArgs e)
-        {
+        private void BtnAdvancedHistory_Click(object sender, RoutedEventArgs e) {
             var win = new Edda.Windows.AdvancedHistoryWindow(mapEditor);
             win.Owner = this;
             win.Show();
         }
         // Event handler for waveform display checkbox
-        private void CheckShowWaveform_Checked(object sender, RoutedEventArgs e)
-        {
-            if (gridController != null)
-            {
+        private void CheckShowWaveform_Checked(object sender, RoutedEventArgs e) {
+            if (gridController != null) {
                 gridController.showWaveform = true;
                 gridController.RequestRedraw(true); // redraw grid and waveform
             }
         }
 
-        private void CheckShowWaveform_Unchecked(object sender, RoutedEventArgs e)
-        {
-            if (gridController != null)
-            {
+        private void CheckShowWaveform_Unchecked(object sender, RoutedEventArgs e) {
+            if (gridController != null) {
                 gridController.showWaveform = false;
                 gridController.RequestRedraw(true); // redraw grid and remove waveform
             }
         }
-        private void BtnApplyOffsetAudio_Click(object sender, RoutedEventArgs e)
-        {
+        private void BtnApplyOffsetAudio_Click(object sender, RoutedEventArgs e) {
             // Close all audio streams
             try { songPlayer?.Stop(); songPlayer?.Dispose(); songPlayer = null; } catch { }
             try { songStream?.Dispose(); songStream = null; } catch { }
             try { songTempoStream?.Dispose(); songTempoStream = null; } catch { }
 
             string songFilename = (string)mapEditor.GetMapValue("_songFilename");
-            if (!string.IsNullOrEmpty(songFilename))
-            {
+            if (!string.IsNullOrEmpty(songFilename)) {
                 string audioPath = Path.Combine(mapEditor.mapFolder, songFilename);
-                if (File.Exists(audioPath))
-                {
+                if (File.Exists(audioPath)) {
                     double offsetMs = 0;
                     try { offsetMs = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_songTimeOffset")); } catch { offsetMs = 0; }
-                    if (Math.Abs(offsetMs) > 0.5)
-                    {
+                    if (Math.Abs(offsetMs) > 0.5) {
                         string ext = Path.GetExtension(audioPath).ToLower();
                         string tempAudio = Path.Combine(mapEditor.mapFolder, "__temp_offset_audio" + ext);
                         string codec = "";
-                        switch (ext)
-                        {
+                        switch (ext) {
                             case ".ogg": codec = "-c:a libvorbis -q:a 6"; break; // Maximum Vorbis quality
                             case ".mp3": codec = "-c:a libmp3lame -q:a 2"; break; // Maximum MP3 quality
                             case ".wav": codec = "-c:a pcm_s16le"; break;
@@ -89,23 +79,19 @@ namespace Edda {
                         {
                             double secs = offsetMs / 1000.0;
                             ffFilter = $"-af \"atrim=start={secs.ToString(System.Globalization.CultureInfo.InvariantCulture)},asetpts=PTS-STARTPTS\" {codec}";
-                        }
-                        else // Shift right: add silence
-                        {
+                        } else // Shift right: add silence
+                          {
                             int ms = (int)Math.Round(Math.Abs(offsetMs));
                             ffFilter = $"-af \"adelay={ms}|{ms}\" {codec}";
                         }
                         exit = Helper.FFmpeg(mapEditor.mapFolder, $"-i \"{audioPath}\" -y {ffFilter} \"{tempAudio}\"");
-                        if (exit == 0 && File.Exists(tempAudio))
-                        {
+                        if (exit == 0 && File.Exists(tempAudio)) {
                             File.Delete(audioPath);
                             File.Move(tempAudio, audioPath);
                             // Reset the offset in info.dat
                             mapEditor.SetMapValue("_songTimeOffset", 0);
                             mapEditor.offsetAppliedToAudio = true;
-                        }
-                        else
-                        {
+                        } else {
                             string errorMsg = $"FFmpeg exit code: {exit}\n";
                             if (!File.Exists(tempAudio))
                                 errorMsg += "Temp audio file not created. ";
@@ -120,16 +106,14 @@ namespace Edda {
             }
             mapEditor.SaveMap();
             // Reload info.dat to synchronize the offset in memory and UI
-            try
-            {
+            try {
                 mapEditor.beatMap.ReadInfo();
                 var refreshedOffset = mapEditor.GetMapValue("_songTimeOffset");
                 txtSongOffset.Text = refreshedOffset.ToString();
                 UpdateOffsetBeatsText(Helper.DoubleParseInvariant(refreshedOffset.ToString()));
                 // Force visual offset to 0 to guarantee alignment
                 gridController.SetDisplayOffsetMs(0);
-            }
-            catch { /* ignore si champ absent */ }
+            } catch { /* ignore si champ absent */ }
             // Delete spectrogram cache
             ClearSongCache();
             // Reload audio stream
@@ -233,7 +217,7 @@ namespace Edda {
         public IDifficultyPredictor difficultyPredictor = DifficultyPredictorPKBeam.SINGLETON;
 
         DoubleAnimation songPlayAnim;            // used for animating scroll when playing a song
-        
+
         double prevScrollPercent = 0;       // percentage of scroll progress before the scroll viewport was changed
 
         // audio playback
@@ -262,7 +246,7 @@ namespace Edda {
         NoteScanner noteScanner;
         BeatScanner beatScanner;
 
-        
+
 
         // Drum volume model: master + per-drum baselines
         double drumMaster = 1.0;
@@ -372,10 +356,10 @@ namespace Edda {
                     )
                 );
 
-            
+
         }
 
-        
+
 
 
         // map file I/O functions
@@ -668,27 +652,22 @@ namespace Edda {
                         if (!mapEditor.offsetAppliedToAudio && Math.Abs(offsetMs) > 0.5) {
                             string ext = Path.GetExtension(sourceAudio).ToLower();
                             string codec = "";
-                            switch (ext)
-                            {
+                            switch (ext) {
                                 case ".ogg": codec = "-c:a libvorbis -q:a 6"; break; // Maximum Vorbis quality
                                 case ".mp3": codec = "-c:a libmp3lame -q:a 2"; break; // Maximum MP3 quality
                                 case ".wav": codec = "-c:a pcm_s16le"; break;
                                 default: codec = "-c:a copy"; break; // fallback: try to copy
                             }
                             string ffFilter = "";
-                            if (offsetMs > 0)
-                            {
+                            if (offsetMs > 0) {
                                 double secs = offsetMs / 1000.0;
                                 ffFilter = $"-af \"atrim=start={secs},asetpts=PTS-STARTPTS\" {codec}";
-                            }
-                            else
-                            {
+                            } else {
                                 int ms = (int)Math.Round(Math.Abs(offsetMs));
                                 ffFilter = $"-af \"adelay={ms}|{ms}\" {codec}";
                             }
                             int exit = Helper.FFmpeg(baseFolder, $"-i \"{sourceAudio}\" -y {ffFilter} \"{bakedAudio}\"");
-                            if (exit != 0 || !File.Exists(bakedAudio))
-                            {
+                            if (exit != 0 || !File.Exists(bakedAudio)) {
                                 MessageBox.Show(this, $"Failed to process audio for export. Exporting original file instead.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                                 File.Copy(sourceAudio, bakedAudio, true);
                             }
@@ -1406,7 +1385,7 @@ namespace Edda {
                 }
                 file = oggFile;
             }
-            
+
             // check and read the generated OGG file
             VorbisWaveReader vorbisStream;
             try {
