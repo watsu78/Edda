@@ -364,6 +364,21 @@
                                 <Button x:Name="btnBrowseMapSaveFolder" Grid.Column="1" Width="80" Margin="5 0 0 0" Click="BtnBrowseMapSaveFolder_Click">Open</Button>
                             </Grid>
                         </Border>
+                        
+                        <!-- Audio quality on conversion -->
+                        <Border Grid.Row="3" Grid.Column="0">
+                            <TextBlock VerticalAlignment="Center">
+                                Audio quality
+                                <LineBreak/>
+                                on conversion
+                            </TextBlock>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="1">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="txtAudioQualityConversion" Width="35" VerticalAlignment="Center" PreviewTextInput="TxtAudioQualityConversion_PreviewTextInput" LostFocus="TxtAudioQualityConversion_LostFocus" MaxLength="2" ToolTip="1 (lowest) to 10 (highest), default: 6"/>
+                                <Label Margin="5 0 0 0">(1-10)</Label>
+                            </StackPanel>
+                        </Border>
                         </Grid>
                     </StackPanel>
                 </Grid>

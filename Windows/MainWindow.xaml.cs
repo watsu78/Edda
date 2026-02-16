@@ -1377,7 +1377,7 @@ namespace Edda {
             var d = new Microsoft.Win32.OpenFileDialog();
             d.Title = "Select a song to map";
             d.DefaultExt = ".ogg";
-            d.Filter = "OGG Vorbis (*.ogg)|*.ogg";
+            d.Filter = "Audio files (*.ogg;*.mp3;*.wav;*.flac;*.aac;*.m4a;*.opus;*.wma)|*.ogg;*.mp3;*.wav;*.flac;*.aac;*.m4a;*.opus;*.wma|All files (*.*)|*.*";
             if (d.ShowDialog() == true) {
                 return d.FileName;
             } else {
@@ -1385,6 +1385,23 @@ namespace Edda {
             }
         }
         private bool LoadSongFile(string file) {
+            //automatic conversion to ogg vorbis if the file is not already an .ogg
+            string ext = System.IO.Path.GetExtension(file).ToLower();
+            if (ext != ".ogg") {
+                int exportQuality = 6;//default quality if not set in user settings
+                var qStr = userSettings.GetValueForKey("ExportQuality");
+                if (!string.IsNullOrEmpty(qStr) && int.TryParse(qStr, out int q))
+                    exportQuality = Math.Max(1, Math.Min(10, q));
+                string oggFile = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(file), System.IO.Path.GetFileNameWithoutExtension(file) + ".ogg");
+                int exit = Helper.FFmpeg(System.IO.Path.GetDirectoryName(file), $"-i \"{file}\" -y -c:a libvorbis -q:a {exportQuality} \"{oggFile}\"");
+                if (exit != 0 || !System.IO.File.Exists(oggFile)) {
+                    MessageBox.Show(this, $"Conversion to OGG Vorbis failed.\nFFmpeg exit code: {exit}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
+                file = oggFile;
+            }
+            
+            // check and read the generated OGG file
             VorbisWaveReader vorbisStream;
             try {
                 vorbisStream = new VorbisWaveReader(file);
