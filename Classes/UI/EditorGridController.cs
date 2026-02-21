@@ -1,6 +1,4 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Edda;
+﻿using Edda;
 using Edda.Classes.MapEditorNS;
 using Edda.Classes.MapEditorNS.NoteNS;
 using Edda.Const;
@@ -8,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -55,7 +55,7 @@ public class EditorGridController : IDisposable {
     Canvas canvasNavInputBox;
     Canvas canvasNavNotes;
     Image navNotesImage;
-    
+
     Canvas canvasBookmarks;
     Canvas canvasBookmarkLabels;
     Canvas canvasTimingChanges;
