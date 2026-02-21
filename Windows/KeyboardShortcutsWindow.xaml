@@ -73,6 +73,7 @@
                                 <RowDefinition/>
                                 <RowDefinition/>
                                 <RowDefinition/>
+                                <RowDefinition/>
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Add Note (Column 1–4)"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="1 / 2 / 3 / 4"/>
@@ -106,6 +107,8 @@
                             <TextBlock Grid.Row="14" Grid.Column="1" Text="Ctrl+Up / Ctrl+Down"/>
                             <TextBlock Grid.Row="15" Grid.Column="0" Text="Move Selection Left/Right (Column)"/>
                             <TextBlock Grid.Row="15" Grid.Column="1" Text="Shift+Left/Right or Ctrl+Left/Right"/>
+                            <TextBlock Grid.Row="16" Grid.Column="0" Text="Select Column 1/2/3/4"/>
+                            <TextBlock Grid.Row="16" Grid.Column="1" Text="Ctrl+1/2/3/4"/>
                         </Grid>
                     <TextBlock Text="Playback" FontWeight="Bold" FontSize="16" Margin="0 0 0 8"/>
                     <Grid>

@@ -261,6 +261,14 @@ namespace Edda {
                 if (e.Key == Key.Q && !songIsPlaying) {
                     mapEditor.QuantizeSelection();
                 }
+
+                // select drum column (Ctrl+1..Ctrl+4)
+                if (e.Key >= Key.D1 && e.Key <= Key.D4) {
+                    int drumCol = e.Key - Key.D1;
+                    gridController.SelectDrumColumn(drumCol);
+                    e.Handled = true;
+                    return;
+                }
             }
 
             if ((e.Key == Key.D1 || e.Key == Key.D2 || e.Key == Key.D3 || e.Key == Key.D4) &&

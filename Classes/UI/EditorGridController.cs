@@ -58,6 +58,27 @@ public class EditorGridController : IDisposable {
 
     Canvas canvasBookmarks;
     Canvas canvasBookmarkLabels;
+    // select the specified drum column
+    public void SelectDrumColumn(int col)
+    {
+        if (col < 0 || col > 3 || mapEditor?.currentMapDifficulty == null)
+            return;
+        var notesCol = mapEditor.currentMapDifficulty.notes.Where(n => n.col == col).ToList();
+        bool allSelected = notesCol.Count > 0 && notesCol.All(n => mapEditor.currentMapDifficulty.selectedNotes.Contains(n));
+        if (allSelected) {
+            // Deselect all notes in this column
+            mapEditor.currentMapDifficulty.selectedNotes.RemoveWhere(n => n.col == col);
+            UnhighlightNotes(notesCol);
+            UnhighlightNavNotes(notesCol);
+        } else {
+            // Select this column, keep other selections
+            foreach (var note in notesCol)
+                mapEditor.currentMapDifficulty.selectedNotes.Add(note);
+            HighlightNotes(notesCol);
+            HighlightNavNotes(notesCol);
+        }
+        mapEditor.currentMapDifficulty.MarkDirty();
+    }
     Canvas canvasTimingChanges;
     Canvas canvasTimingChangeLabels;
     Line lineSongMouseover;
@@ -1379,7 +1400,7 @@ public class EditorGridController : IDisposable {
         // for some reason Canvas.SetLeft(0) doesn't correspond to the leftmost of the canvas, so we need to do some unknown adjustment to line it up
         var unknownNoteXAdjustment = (unitLength / unitLengthUnscaled - 1) * unitLengthUnscaled / 2;
 
-        var adjustedMousePos = EditorGrid.ActualHeight - mousePos.Y - unitHeight / 2;
+        var adjustedMousePos = EditorGrid.Height - mousePos.Y - unitHeight / 2;
         double gridLength = unitLength / gridDivision;
 
         // calculate column
@@ -1926,7 +1947,7 @@ public class EditorGridController : IDisposable {
         return col;
     }
     private double BeatForPosition(double position, bool snap) {
-        var pos = EditorGrid.ActualHeight - position - unitHeight / 2;
+        var pos = EditorGrid.Height - position - unitHeight / 2;
         double gridLength = unitLength / gridDivision;
         // check if mouse position would correspond to a negative row index
         double snapped = 0;
