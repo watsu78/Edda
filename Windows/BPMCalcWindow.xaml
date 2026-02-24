@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Edda"
         mc:Ignorable="d"
-        Title="BPM Finder" Height="270" Width="220" ResizeMode="NoResize" Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" WindowStartupLocation="CenterOwner" KeyDown="Window_KeyDown">
+        Title="BPM Finder" Height="270" Width="220" ResizeMode="CanResize" Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" WindowStartupLocation="CenterOwner" KeyDown="Window_KeyDown">
     <Grid>
         <DockPanel>
             <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" BorderThickness="0, 0, 0, 1">
@@ -42,6 +42,8 @@
                         <Label FontSize="14" Padding="5 0 0 6" VerticalAlignment="Bottom" FontFamily="Bahnschrift">BPM</Label>
                     </StackPanel>
                     <Label x:Name="lblUnroundedAvgBPM" HorizontalAlignment="Center" Padding="0" FontSize="16">(0.00)</Label>
+                    <Label x:Name="lblAutoBPM" HorizontalAlignment="Center" Padding="0" FontSize="16" Foreground="Black">Auto: N/A</Label>
+                    <Button x:Name="btnAutoBPM" Content="Auto BPM" Width="100" Margin="0 10 0 0" HorizontalAlignment="Center" Click="BtnAutoBPM_Click" />
                     <!--
                     <StackPanel Visibility="Collapsed" Margin="0 25 0 0">
                         <Label Padding="0" HorizontalAlignment="Center">Median</Label>
