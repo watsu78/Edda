@@ -66,13 +66,7 @@ namespace Edda {
                     if (Math.Abs(offsetMs) > 0.5) {
                         string ext = Path.GetExtension(audioPath).ToLower();
                         string tempAudio = Path.Combine(mapEditor.mapFolder, "__temp_offset_audio" + ext);
-                        string codec = "";
-                        switch (ext) {
-                            case ".ogg": codec = "-c:a libvorbis -q:a 6"; break; // Maximum Vorbis quality
-                            case ".mp3": codec = "-c:a libmp3lame -q:a 2"; break; // Maximum MP3 quality
-                            case ".wav": codec = "-c:a pcm_s16le"; break;
-                            default: codec = "-c:a copy"; break; // fallback: try to copy
-                        }
+                        string codec = "-ar 44100 -c:a libvorbis -q:a 6"; // Maximum Vorbis quality, force 44.1kHz
                         string ffFilter = "";
                         int exit = 1;
                         if (offsetMs > 0) // Shift left: trim the beginning
@@ -651,13 +645,7 @@ namespace Edda {
                     if (File.Exists(sourceAudio)) {
                         if (!mapEditor.offsetAppliedToAudio && Math.Abs(offsetMs) > 0.5) {
                             string ext = Path.GetExtension(sourceAudio).ToLower();
-                            string codec = "";
-                            switch (ext) {
-                                case ".ogg": codec = "-c:a libvorbis -q:a 6"; break; // Maximum Vorbis quality
-                                case ".mp3": codec = "-c:a libmp3lame -q:a 2"; break; // Maximum MP3 quality
-                                case ".wav": codec = "-c:a pcm_s16le"; break;
-                                default: codec = "-c:a copy"; break; // fallback: try to copy
-                            }
+                            string codec = "-ar 44100 -c:a libvorbis -q:a 6"; // Maximum Vorbis quality, force 44.1kHz
                             string ffFilter = "";
                             if (offsetMs > 0) {
                                 double secs = offsetMs / 1000.0;
