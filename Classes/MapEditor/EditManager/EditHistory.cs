@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
+namespace Edda.Classes.MapEditorNS.EditManager {
 public class EditHistory<T> {
     public event Action? HistoryChanged;
     public List<EditList<T>> GetHistory() {
@@ -72,4 +73,5 @@ public class EditHistory<T> {
         history.RemoveAt(0);
         currentIndex--;
     }
+}
 }

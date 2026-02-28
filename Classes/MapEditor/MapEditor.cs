@@ -5,6 +5,7 @@ using Edda.Classes.MapEditorNS.Stats;
 using Edda.Const;
 using Newtonsoft.Json.Linq;
 using RagnaRuneString;
+using Edda.Classes.MapEditorNS.EditManager;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -358,8 +359,39 @@ public class MapEditor : IDisposable {
         parent.gridController.DrawNavNotes(drawNotes);
 
         if (updateHistory) {
-            currentMapDifficulty?.editorHistory.Add(new EditList<Note>(false, undrawNotes));
-            currentMapDifficulty?.editorHistory.Add(new EditList<Note>(true, drawNotes));
+            bool isMove = false;
+            // If updateHistory is actually an int, treat as isMove flag
+            if (updateHistory is int && (int)(object)updateHistory == 2) {
+                isMove = true;
+            }
+            UpdateNotes(newNotes, oldNotes, updateHistory, false);
+        }
+        currentMapDifficulty?.editorHistory.Print();
+        SelectNewNotes(drawNotes);
+        parent.RefreshDiscordPresence();
+        RecalculateMapStats();
+    }
+    
+    public void UpdateNotes(IEnumerable<Note> newNotes, IEnumerable<Note> oldNotes, bool updateHistory, bool isMove) {
+        currentMapDifficulty?.MarkDirty();
+
+        // remove all old Notes
+        var undrawNotes = oldNotes.Where(n => currentMapDifficulty != null && currentMapDifficulty.RemoveNoteInternal(n)).ToList();
+
+        // undraw the added notes
+        parent.gridController.UndrawNotes(undrawNotes);
+        parent.gridController.UndrawNavNotes(undrawNotes);
+
+        // add new notes
+        var drawNotes = newNotes.Where(n => currentMapDifficulty != null && currentMapDifficulty.AddNoteInternal(n)).ToList();
+
+        // draw new notes
+        parent.gridController.DrawNotes(drawNotes);
+        parent.gridController.DrawNavNotes(drawNotes);
+
+        if (updateHistory) {
+            currentMapDifficulty?.editorHistory.Add(new EditList<Note>(false, undrawNotes, isMove));
+            currentMapDifficulty?.editorHistory.Add(new EditList<Note>(true, drawNotes, isMove));
             currentMapDifficulty?.editorHistory.Consolidate(2);
         }
         currentMapDifficulty?.editorHistory.Print();
@@ -590,7 +622,7 @@ public class MapEditor : IDisposable {
                 double newBeat = n.beat + beatOffset;
                 return new Note(newBeat, n.col);
             });
-        UpdateNotes(movedNotes, currentMapDifficulty.selectedNotes);
+        UpdateNotes(movedNotes, currentMapDifficulty.selectedNotes, true, true);
     }
     public void ShiftSelectionByCol(int offset) {
         if (currentMapDifficulty == null) {
@@ -605,8 +637,7 @@ public class MapEditor : IDisposable {
                 }
                 return new Note(n.beat, newCol);
             });
-
-        UpdateNotes(movedSelection, currentMapDifficulty.selectedNotes);
+        UpdateNotes(movedSelection, currentMapDifficulty.selectedNotes, true, true);
     }
     public void Undo() {
         if (currentMapDifficulty == null) {

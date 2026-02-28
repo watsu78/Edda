@@ -1,9 +1,13 @@
 <Window x:Class="Edda.Windows.AdvancedHistoryWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Advanced History" Height="500" Width="440" MinWidth="440" Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
+        Title="Advanced History" Height="800" Width="650" MinWidth="650" Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
     <Grid>
-        <ListView x:Name="HistoryListBox" Margin="10" MouseDoubleClick="HistoryListBox_MouseDoubleClick">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <ListView x:Name="HistoryListBox" Margin="10" MouseDoubleClick="HistoryListBox_MouseDoubleClick" Grid.Row="0">
             <ListView.Resources>
                 <Style TargetType="{x:Type ListViewItem}">
                     <Setter Property="BorderBrush" Value="Gray"/>
@@ -16,11 +20,31 @@
                 <GridView>
                     <GridViewColumn Header="#" DisplayMemberBinding="{Binding Index}" Width="40"/>
                     <GridViewColumn Header="Action" DisplayMemberBinding="{Binding Action}" Width="120"/>
-                    <GridViewColumn Header="Drum" DisplayMemberBinding="{Binding Drum}" Width="80"/>
-                    <GridViewColumn Header="Beat" DisplayMemberBinding="{Binding Beat}" Width="60"/>
-                    <GridViewColumn Header="Timestamp" DisplayMemberBinding="{Binding Timestamp}" Width="100"/>
+                    <GridViewColumn Header="# of notes" DisplayMemberBinding="{Binding NumberOfNotes}" Width="60"/>
+                    <GridViewColumn Header="Drum(s)" Width="100">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DrumSummary}" ToolTip="{Binding DrumFull}" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Beat(s)" Width="120">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding BeatSummary}" ToolTip="{Binding BeatFull}" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Timestamp" Width="140">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding TimestampSummary}" ToolTip="{Binding TimestampFull}" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
                 </GridView>
             </ListView.View>
         </ListView>
+        <Button Content="Clear History" Grid.Row="1" Margin="10" HorizontalAlignment="Right" Width="150" Click="ClearHistoryButton_Click"/>
     </Grid>
 </Window>

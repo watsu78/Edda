@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
+namespace Edda.Classes.MapEditorNS.EditManager {
 public class EditList<T> : ICloneable {
     public List<Edit<T>> items;
     public EditList(List<Edit<T>> items) {
@@ -9,10 +10,10 @@ public class EditList<T> : ICloneable {
     public EditList() {
         this.items = new List<Edit<T>>();
     }
-    public EditList(bool isAdding, IEnumerable<T> items) {
+    public EditList(bool isAdding, IEnumerable<T> items, bool isMove = false) {
         this.items = new List<Edit<T>>();
         foreach (T item in items) {
-            this.items.Add(new Edit<T>(isAdding, item));
+            this.items.Add(new Edit<T>(isAdding, item, isMove));
         }
     }
     public override string ToString() {
@@ -27,7 +28,7 @@ public class EditList<T> : ICloneable {
     public EditList<T> Inverted() {
         var e = new List<Edit<T>>();
         foreach (var i in items) {
-            Edit<T> inverted = new Edit<T>(!i.isAdd, i.item);
+            Edit<T> inverted = new Edit<T>(!i.isAdd, i.item, i.isMove);
             e.Add(inverted);
         }
         return new EditList<T>(e);
@@ -43,4 +44,5 @@ public class EditList<T> : ICloneable {
         }
         return clone;
     }
+}
 }
