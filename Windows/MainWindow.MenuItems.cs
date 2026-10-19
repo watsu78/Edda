@@ -29,6 +29,13 @@ namespace Edda {
             PauseSong();
             ExportMap();
         }
+        private void MenuItemUploadRagnaCustoms_Click(object sender, RoutedEventArgs e) {
+            if (!mapIsLoaded) {
+                return;
+            }
+            PauseSong();
+            new RagnaCustomsUploadWindow(mapEditor.mapFolder, mapEditor.offsetAppliedToAudio, SaveBeatmap) { Owner = this }.ShowDialog();
+        }
 
         // Edit
         private void MenuItemAddNote1_Click(object sender, RoutedEventArgs e) {

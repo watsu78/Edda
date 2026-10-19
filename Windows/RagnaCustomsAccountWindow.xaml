@@ -1,0 +1,22 @@
+<Window x:Class="Edda.Windows.RagnaCustomsAccountWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="RagnaCustoms account" Width="460" SizeToContent="Height"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Loaded="Window_Loaded" Closing="Window_Closing"
+        Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
+    <StackPanel Margin="20">
+        <TextBlock FontSize="18" FontWeight="Bold" Text="RagnaCustoms" Margin="0 0 0 12"/>
+        <TextBlock TextWrapping="Wrap" Text="Get your API key from your RagnaCustoms account, then paste it below. Edda stores it in Windows Credential Manager for your Windows user."/>
+        <Button Content="Open my RagnaCustoms account" HorizontalAlignment="Left" Margin="0 10 0 16" Padding="8 4" Click="OpenAccount_Click"/>
+        <Label Target="{Binding ElementName=ApiKey}" Content="API _key" Padding="0 0 0 5"/>
+        <PasswordBox x:Name="ApiKey" Padding="4" MaxLength="1280"/>
+        <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0 8 0 12"/>
+        <TextBlock x:Name="AccountStatus" Text="Account not checked yet." TextWrapping="Wrap" Margin="0 0 0 12"/>
+        <WrapPanel HorizontalAlignment="Right">
+            <Button x:Name="RemoveButton" Content="Remove saved key" Margin="0 0 8 0" Padding="8 4" Click="RemoveKey_Click"/>
+            <Button x:Name="SaveButton" Content="Save key" Margin="0 0 8 0" Padding="8 4" Click="SaveKey_Click"/>
+            <Button x:Name="CheckButton" Content="Check account" Margin="0 0 8 0" Padding="8 4" Click="CheckAccount_Click"/>
+            <Button Content="Close" Padding="8 4" IsCancel="True"/>
+        </WrapPanel>
+    </StackPanel>
+</Window>

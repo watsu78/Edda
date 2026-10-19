@@ -11,7 +11,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading;
@@ -588,102 +587,17 @@ namespace Edda {
             if (d.ShowDialog() != CommonFileDialogResult.Ok) {
                 return;
             }
-
-            SaveBeatmap();
-
-            string songArtist = Helper.ValidFilenameFrom((string)mapEditor.GetMapValue("_songAuthorName"));
-            string songName = Helper.ValidFilenameFrom((string)mapEditor.GetMapValue("_songName"));
-            string baseFolder = mapEditor.mapFolder;
-            string zipName = Helper.ValidMapFolderNameFrom(songArtist + songName);
-            // make the temp dir for zip
-            string zipFolder = Path.Combine(baseFolder, zipName + "_tempDir");
-            string zipPath = Path.Combine(d.FileName, zipName + ".zip");
-
             try {
+                SaveBeatmap();
+                string artist = Helper.ValidFilenameFrom((string)mapEditor.GetMapValue("_songAuthorName"));
+                string song = Helper.ValidFilenameFrom((string)mapEditor.GetMapValue("_songName"));
+                string zipPath = Path.Combine(d.FileName, Helper.ValidMapFolderNameFrom(artist + song) + ".zip");
                 Helper.FileDeleteIfExists(zipPath);
-
-                // only select the files that need to be in the ZIP
-                var copyFiles = new List<string> {
-                    Path.Combine(baseFolder, "info.dat")
-                };
-                string songFilename = (string)mapEditor.GetMapValue("_songFilename");
-                if (songFilename != null && File.Exists(Path.Combine(baseFolder, songFilename))) {
-                    // Always generate audio for export (apply silence/trim based on offset)
-                    // so skip copying original here; it will be produced below.
-                }
-                string coverFilename = (string)mapEditor.GetMapValue("_coverImageFilename");
-                if (coverFilename != null && File.Exists(Path.Combine(baseFolder, coverFilename))) {
-                    copyFiles.Add(Path.Combine(baseFolder, coverFilename));
-                }
-                string previewFile = Path.Combine(baseFolder, "preview.ogg");
-                if (File.Exists(previewFile)) {
-                    copyFiles.Add(previewFile);
-                }
-                for (int diffIndex = 0; diffIndex < mapEditor.numDifficulties; ++diffIndex) {
-                    var filename = (string)mapEditor.GetMapValue("_beatmapFilename", (RagnarockMapDifficulties)diffIndex);
-                    copyFiles.Add(Path.Combine(baseFolder, filename));
-                }
-                // --
-
-                if (Directory.Exists(zipFolder)) {
-                    Helper.DeleteDirectory(zipFolder);
-                }
-                Directory.CreateDirectory(zipFolder);
-
-                // need to use cmd to copy files; .NET Filesystem API throws an exception because "the file is being used"
-                //Helper.CmdCopyFiles(copyFiles, zipFolder);
-                foreach (var file in copyFiles) {
-                    File.Copy(file, Path.Combine(zipFolder, Path.GetFileName(file)));
-                }
-
-                // Appliquer l'offset à l'audio à l'export SEULEMENT si l'utilisateur ne l'a pas déjà appliqué
-                if (!string.IsNullOrEmpty(songFilename)) {
-                    string sourceAudio = Path.Combine(baseFolder, songFilename);
-                    string bakedAudio = Path.Combine(zipFolder, songFilename);
-                    double offsetMs = 0;
-                    try { offsetMs = Helper.DoubleParseInvariant((string)mapEditor.GetMapValue("_songTimeOffset")); } catch { offsetMs = 0; }
-
-                    if (File.Exists(sourceAudio)) {
-                        if (!mapEditor.offsetAppliedToAudio && Math.Abs(offsetMs) > 0.5) {
-                            string ext = Path.GetExtension(sourceAudio).ToLower();
-                            string codec = "-ar 44100 -c:a libvorbis -q:a 6"; // Maximum Vorbis quality, force 44.1kHz
-                            string ffFilter = "";
-                            if (offsetMs > 0) {
-                                double secs = offsetMs / 1000.0;
-                                ffFilter = $"-af \"atrim=start={secs},asetpts=PTS-STARTPTS\" {codec}";
-                            } else {
-                                int ms = (int)Math.Round(Math.Abs(offsetMs));
-                                ffFilter = $"-af \"adelay={ms}|{ms}\" {codec}";
-                            }
-                            int exit = Helper.FFmpeg(baseFolder, $"-i \"{sourceAudio}\" -y {ffFilter} \"{bakedAudio}\"");
-                            if (exit != 0 || !File.Exists(bakedAudio)) {
-                                MessageBox.Show(this, $"Failed to process audio for export. Exporting original file instead.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                File.Copy(sourceAudio, bakedAudio, true);
-                            }
-                        } else {
-                            File.Copy(sourceAudio, bakedAudio, true);
-                        }
-
-                        // Reset _songTimeOffset in exported info.dat
-                        try {
-                            string infoPath = Path.Combine(baseFolder, "info.dat");
-                            string infoZipPath = Path.Combine(zipFolder, "info.dat");
-                            var infoJson = File.ReadAllText(infoPath);
-                            var j = Newtonsoft.Json.Linq.JObject.Parse(infoJson);
-                            j["_songTimeOffset"] = 0;
-                            File.WriteAllText(infoZipPath, Newtonsoft.Json.JsonConvert.SerializeObject(j, Newtonsoft.Json.Formatting.Indented));
-                        } catch { }
-                    }
-                }
-
-                ZipFile.CreateFromDirectory(zipFolder, zipPath);
-
+                var builder = new Edda.Classes.MapEditorNS.MapArchiveBuilder(Helper.FFmpeg);
+                builder.Create(mapEditor.mapFolder, zipPath, mapEditor.offsetAppliedToAudio, false,
+                    reportWarning: message => MessageBox.Show(this, message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning));
             } catch (Exception) {
-                MessageBox.Show(this, $"An error occured while creating the zip file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            } finally {
-                if (Directory.Exists(zipFolder)) {
-                    Helper.DeleteDirectory(zipFolder);
-                }
+                MessageBox.Show(this, "An error occured while creating the zip file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
