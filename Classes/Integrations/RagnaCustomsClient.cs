@@ -10,8 +10,14 @@ using System.Threading.Tasks;
 
 namespace Edda.Classes.Integrations {
     public sealed class RagnaCustomsClient : IDisposable {
-        private static readonly Uri UploadUri = new("https://api.ragnacustoms.com/api/upload/song");
-        private static readonly Uri AccountUri = new("https://api.ragnacustoms.com/api/account/me");
+#if DEBUG
+        // Development builds target the dedicated development API.
+        internal const string ApiBaseUrl = "https://api.ragnacustoms.com/api";
+#else
+        internal const string ApiBaseUrl = "https://ragnacustoms.com/api";
+#endif
+        private static readonly Uri UploadUri = new(ApiBaseUrl + "/upload/song");
+        private static readonly Uri AccountUri = new(ApiBaseUrl + "/account/me");
         private readonly HttpClient client;
 
         public RagnaCustomsClient() : this(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) {
@@ -93,7 +99,7 @@ namespace Edda.Classes.Integrations {
                 HttpStatusCode.NotFound => "The RagnaCustoms upload API is not available yet.",
                 HttpStatusCode.RequestEntityTooLarge => "The map ZIP exceeds the upload size allowed by RagnaCustoms.",
                 HttpStatusCode.TooManyRequests => "Too many requests. Wait before trying again.",
-                HttpStatusCode.BadRequest or HttpStatusCode.UnprocessableEntity => "RagnaCustoms rejected the map ZIP. Check its info.dat, audio, cover and difficulty files.",
+                HttpStatusCode.BadRequest or HttpStatusCode.UnprocessableEntity => "RagnaCustoms rejected the map ZIP. Check info.dat, audio, cover and difficulty files.",
                 _ when (int)status >= 300 && (int)status < 400 => "RagnaCustoms redirected the upload. No redirect was followed; check the API documentation.",
                 _ => $"RagnaCustoms could not complete the upload (HTTP {(int)status}). Check your account before trying again."
             };

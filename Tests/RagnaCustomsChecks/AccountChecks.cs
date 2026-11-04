@@ -14,7 +14,7 @@ namespace Edda.Tests {
             int requests = 0;
             using (RagnaCustomsClient client = Client((request, _) => {
                 requests++;
-                Require(request.Method == HttpMethod.Get && request.RequestUri.AbsoluteUri == "https://api.ragnacustoms.com/api/account/me", "Account checks must use GET /api/account/me on the production API host.");
+                Require(request.Method == HttpMethod.Get && request.RequestUri.AbsoluteUri == RagnaCustomsClient.ApiBaseUrl + "/account/me", "Account checks must use GET /account/me on the configured API base URL.");
                 Require(request.Headers.GetValues("X-API-Key").Single() == "test-key", "Account checks must authenticate using X-API-Key.");
                 Require(request.Content == null, "Checking membership must not upload any file.");
                 return Task.FromResult(Json(HttpStatusCode.OK, """

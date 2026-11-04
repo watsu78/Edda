@@ -18,7 +18,7 @@ namespace Edda.Tests {
                 int requests = 0;
                 using StubHandler handler = new(async (request, token) => {
                     requests++;
-                    Require(request.Method == HttpMethod.Post && request.RequestUri.AbsoluteUri == "https://api.ragnacustoms.com/api/upload/song", "Upload must use the production API upload route.");
+                    Require(request.Method == HttpMethod.Post && request.RequestUri.AbsoluteUri == RagnaCustomsClient.ApiBaseUrl + "/upload/song", "Upload must use the upload route on the configured API base URL.");
                     Require(request.Headers.GetValues("X-API-Key").Single() == "test-key", "The key must be passed in X-API-Key.");
                     Require(!request.RequestUri.Query.Contains("test-key"), "The key must never be put in the URL.");
                     MultipartFormDataContent form = request.Content as MultipartFormDataContent;

@@ -48,7 +48,7 @@ Edda checks the saved account using `GET /api/account/me` and displays its usern
 
 Open a map and choose **File > Upload to RagnaCustoms**. Clicking **Upload map** saves the current map and sends a ZIP with all difficulties, audio, cover and optional preview. Each upload creates a **new WIP map**; review it on RagnaCustoms before publishing. Upload requires **Premium Tier 2 or higher**.
 
-The client uses the production API at `https://api.ragnacustoms.com/api`: `GET /account/me` checks the account, and `POST /upload/song` uploads the ZIP in the multipart `file` field. Both requests authenticate through `X-API-Key`. Uploads can be cancelled. Edda does not automatically retry uploads; after a timeout or interrupted connection, check your account before trying again to avoid creating duplicate maps.
+The client uses `https://ragnacustoms.com/api` in Release builds and the development API `https://api.ragnacustoms.com/api` in Debug builds: `GET /account/me` checks the account, and `POST /upload/song` uploads the ZIP in the multipart `file` field. Both requests authenticate through `X-API-Key`. Uploads can be cancelled. Edda does not automatically retry uploads; after a timeout or interrupted connection, check your account before trying again to avoid creating duplicate maps.
 
 Run the integration checks on Windows with:
 
