@@ -1,0 +1,21 @@
+<Window x:Class="Edda.Windows.RagnaCustomsUploadWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Upload to RagnaCustoms" Width="480" SizeToContent="Height"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Closing="Window_Closing"
+        Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
+    <StackPanel Margin="20">
+        <TextBlock FontWeight="Bold" FontSize="18" Text="Upload to RagnaCustoms" Margin="0 0 0 12"/>
+        <TextBlock TextWrapping="Wrap" Text="Save and send the current map, including all difficulties, audio and cover, to the account linked to your API key."/>
+        <TextBlock TextWrapping="Wrap" Margin="0 10 0 12" Text="Each upload creates a new WIP map. Premium Tier 2 or higher is required. You can review the map on RagnaCustoms before publishing it."/>
+        <Button x:Name="AccountButton" Content="Manage API key..." HorizontalAlignment="Left" Padding="8 4" Click="ManageAccount_Click"/>
+        <TextBlock x:Name="AccountStatus" Text="Your account and Premium tier will be checked before upload." TextWrapping="Wrap" Margin="0 12 0 0"/>
+        <TextBlock x:Name="Status" Text="Ready to upload." TextWrapping="Wrap" Margin="0 16 0 10"/>
+        <ProgressBar x:Name="Progress" Height="8" IsIndeterminate="True" Visibility="Collapsed" Margin="0 0 0 14"/>
+        <WrapPanel HorizontalAlignment="Right">
+            <Button x:Name="OpenMapButton" Content="Open WIP map" Visibility="Collapsed" Margin="0 0 8 0" Padding="8 4" Click="OpenMap_Click"/>
+            <Button x:Name="UploadButton" Content="Upload map" Margin="0 0 8 0" Padding="8 4" Click="Upload_Click"/>
+            <Button x:Name="CloseButton" Content="Close" Padding="8 4" Click="Close_Click"/>
+        </WrapPanel>
+    </StackPanel>
+</Window>

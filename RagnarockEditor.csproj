@@ -23,6 +23,7 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
     <None Remove="Resources\bassdrum1.wav" />
     <None Remove="Resources\bassdrum2.wav" />
     <None Remove="Resources\bassdrum3.wav" />

@@ -29,6 +29,7 @@
                         <Separator />
                         <MenuItem x:Name="MenuItemImportMap" Header="_Import Map" InputGestureText="Ctrl+I" Click="MenuItemImportMap_Click"/>
                         <MenuItem x:Name="MenuItemExportMap" Header="_Export Map" InputGestureText="Ctrl+E" Click="MenuItemExportMap_Click"/>
+                        <MenuItem Header="Upload to _RagnaCustoms..." Click="MenuItemUploadRagnaCustoms_Click"/>
                         <Separator />
                         <MenuItem x:Name="MenuItemCloseMap" Header="_Close Map" InputGestureText="Ctrl+W" Click="MenuItemCloseMap_Click"/>
                     </MenuItem>

@@ -336,6 +336,9 @@ namespace Edda {
             userSettings.SetValueForKey(UserSettingsKey.EnableDiscordRPC, newStatus);
             UpdateSettings();
         }
+        private void ManageRagnaCustoms_Click(object sender, RoutedEventArgs e) {
+            new Edda.Windows.RagnaCustomsAccountWindow { Owner = this }.ShowDialog();
+        }
         private void CheckAutosave_Click(object sender, RoutedEventArgs e) {
             bool newStatus = CheckAutosave.IsChecked ?? false;
             userSettings.SetValueForKey(UserSettingsKey.EnableAutosave, newStatus);
